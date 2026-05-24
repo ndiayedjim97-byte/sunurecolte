@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darou Salam Agri-Tech Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+    <div id="notificationPopUp" class="notif-box"></div>
+
+    <header class="main-header">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <span>Darou Salam Agri-Tech</span>
+        </div>
+        <p id="currentDate">-- / -- / ----</p>
+    </header>
+
+    <main id="appContent">
+        
+        <section id="tab-home" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-box-open"></i>
+                    <p>Récolte Totale</p>
+                    <h3 id="totalKilos">0</h3> <span>KG</span>
+                </div>
+                <div class="stat-card income">
+                    <i class="fas fa-wallet"></i>
+                    <p>Revenus</p>
+                    <h3 id="totalArgent">0</h3> <span>FCFA</span>
+                </div>
+                <div class="stat-card expense">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <p>Dépenses</p>
+                    <h3 id="totalDepenses">0</h3> <span>FCFA</span>
+                </div>
+            </div>
+
+            <div class="card history-section">
+                <h2><i class="fas fa-history"></i> Historique Récent</h2>
+                <div id="historique" class="log-list">Connexion...</div>
+            </div>
+        </section>
+
+        <section id="tab-field" class="tab-content">
+            <div class="card pointage-card">
+                <h2><i class="fas fa-clock"></i> Pointage & Journal</h2>
+                <div class="pointage-status" id="statusPointage">Statut : Non arrivé</div>
+                <div class="timer-buttons">
+                    <button id="btnEntree" onclick="pointerEntree()" class="btn-in">Arrivée</button>
+                    <button id="btnSortie" onclick="pointerSortie()" class="btn-out" disabled>Départ</button>
+                </div>
+                <textarea id="tachesFaites" placeholder="Qu'as-tu fait aujourd'hui ?" disabled></textarea>
+                <div class="media-upload">
+                    <label for="mediaCapture"><i class="fas fa-camera"></i> Photo du champ</label>
+                    <input type="file" id="mediaCapture" accept="image/*" capture="environment" disabled>
+                    <div id="previewContainer"></div>
+                </div>
+                <button id="btnValiderJournal" onclick="validerJournal()" class="btn-primary" disabled>Valider le Journal</button>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-seedling"></i> Nouvelle Récolte</h2>
+                <select id="produit">
+                    <option value="Piment Big Sun">Piment Big Sun (2000 pieds)</option>
+                    <option value="Gombo">Gombo</option>
+                </select>
+                <input type="number" id="poids" placeholder="Poids en KG">
+                <button onclick="enregistrerRecolte()" class="btn-primary">Enregistrer</button>
+            </div>
+        </section>
+
+        <section id="tab-finance" class="tab-content">
+            <div class="card finance-card">
+                <h2><i class="fas fa-shopping-cart"></i> Enregistrer une Vente</h2>
+                <input type="date" id="dateVente">
+                <select id="produitVendu">
+                    <option value="Piment Big Sun">Piment Big Sun</option>
+                    <option value="Gombo">Gombo</option>
+                </select>
+                <div class="input-group">
+                    <input type="number" id="poidsVendu" placeholder="KG" oninput="calculerTotalVente()">
+                    <input type="number" id="prixAuKg" placeholder="Prix/KG" oninput="calculerTotalVente()">
+                </div>
+                <input type="number" id="prixTotalVente" placeholder="Total FCFA" disabled class="total-input">
+                <button onclick="enregistrerVente()" class="btn-primary">Valider la Vente</button>
+            </div>
+
+            <div class="card finance-card expense">
+                <h2><i class="fas fa-minus-circle"></i> Nouvelle Dépense</h2>
+                <input type="date" id="dateDepense">
+                <input type="text" id="designationDepense" placeholder="Désignation (ex: Engrais)">
+                <input type="number" id="montantDepense" placeholder="Montant FCFA">
+                <label for="factureDepense" class="label-file">🧾 Ajouter Facture</label>
+                <input type="file" id="factureDepense" accept="image/*" style="display:none">
+                <div id="previewFacture"></div>
+                <button onclick="enregistrerDepense()" class="btn-danger">Enregistrer Dépense</button>
+            </div>
+        </section>
+
+        <section id="tab-chat" class="tab-content">
+            <div class="chat-container">
+                <div class="chat-header">Discussion Équipe</div>
+                <div id="chatBox" class="chat-box"></div>
+                <div class="chat-footer">
+                    <select id="expediteur">
+                        <option value="Djim">Djim</option>
+                        <option value="Moustapha">Moustapha</option>
+                        <option value="Ndiobo">Ndiobo</option>
+                    </select>
+                    <input type="text" id="msgInput" placeholder="Message...">
+                    <button onclick="envoyerMessage()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('tab-home', this)">
+            <i class="fas fa-chart-pie"></i>
+            <span>Dashboard</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-field', this)">
+            <i class="fas fa-tractor"></i>
+            <span>Terrain</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-finance', this)">
+            <i class="fas fa-coins"></i>
+            <span>Finances</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-chat', this)">
+            <i class="fas fa-comments"></i>
+            <span>Chat</span>
+        </div>
+    </nav>
+
+    <script>
+        // --- CONFIGURATION FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9Es0QKcPwMiS46k0XPhWnbwFyiDS4lvE",
+            authDomain: "darou-salam-agritech.firebaseapp.com",
+            databaseURL: "https://darou-salam-agritech-default-rtdb.firebaseio.com/",
+            projectId: "darou-salam-agritech",
+            storageBucket: "darou-salam-agritech.firebasestorage.app",
+            messagingSenderId: "771633153001",
+            appId: "1:771633153001:web:e5fcfec1253094c0c34178"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // --- NAVIGATION LOGIQUE ---
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            el.classList.add('active');
+        }
+
+        // --- INITIALISATION & DATE ---
+        window.onload = function() {
+            const now = new Date();
+            document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+            document.getElementById('dateVente').valueAsDate = now;
+            document.getElementById('dateDepense').valueAsDate = now;
+        };
+
+        // --- VARIABLES ET NOTIFS ---
+        let mediaUrl = null, factureUrl = null, premierChargement = true;
+
+        function afficherNotification(msg) {
+            const pop = document.getElementById('notificationPopUp');
+            pop.innerText = msg; pop.style.display = 'block';
+            setTimeout(() => pop.style.display = 'none', 4000);
+        }
+
+        // --- SYNCHRONISATION FIREBASE ---
+        database.ref('dashboard').on('value', (snap) => {
+            const d = snap.val() || { totalKilos: 0, totalArgent: 0, totalDepenses: 0 };
+            document.getElementById('totalKilos').innerText = d.totalKilos;
+            document.getElementById('totalArgent').innerText = d.totalArgent.toLocaleString();
+            document.getElementById('totalDepenses').innerText = d.totalDepenses.toLocaleString();
+        });
+
+        database.ref('logs').limitToLast(15).on('value', (snap) => {
+            const hist = document.getElementById('historique'); hist.innerHTML = "";
+            const data = snap.val();
+            if(data) {
+                Object.keys(data).reverse().forEach(k => {
+                    hist.innerHTML += `<div class="log-item"><b>${data[k].heure}</b> : ${data[k].texte}</div>`;
+                });
+                if(!premierChargement) afficherNotification("Mise à jour reçue !");
+            }
+            premierChargement = false;
+        });
+
+        database.ref('chat').limitToLast(20).on('value', (snap) => {
+            const chat = document.getElementById('chatBox'); chat.innerHTML = "";
+            const data = snap.val();
+            if(data) {
+                Object.keys(data).forEach(k => {
+                    const m = data[k];
+                    chat.innerHTML += `<div class="msg"><b>${m.expediteur}</b><br>${m.message}</div>`;
+                });
+                chat.scrollTop = chat.scrollHeight;
+            }
+        });
+
+        database.ref('pointage').on('value', (snap) => {
+            const p = snap.val() || { statut: "non_arrive" };
+            const status = document.getElementById('statusPointage');
+            const btns = { in: document.getElementById('btnEntree'), out: document.getElementById('btnSortie'), journal: document.getElementById('btnValiderJournal') };
+            
+            if(p.statut === "en_cours") {
+                status.innerText = "⏳ Au champ depuis " + p.heureEntree;
+                btns.in.disabled = true; btns.out.disabled = false;
+            } else if(p.statut === "attente_journal") {
+                status.innerText = "✅ Sortie à " + p.heureSortie + ". Remplis le journal.";
+                btns.out.disabled = true; btns.journal.disabled = false;
+                document.getElementById('tachesFaites').disabled = false;
+                document.getElementById('mediaCapture').disabled = false;
+            } else {
+                status.innerText = "😴 Statut : Pas encore arrivé";
+                btns.in.disabled = false; btns.out.disabled = true; btns.journal.disabled = true;
+                document.getElementById('tachesFaites').disabled = true;
+                document.getElementById('mediaCapture').disabled = true;
+            }
+        });
+
+        // --- ACTIONS ---
+        function ajouterAuLog(texte) {
+            database.ref('logs').push({
+                heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                texte: texte
+            });
+        }
+
+        function enregistrerRecolte() {
+            const pds = parseFloat(document.getElementById('poids').value);
+            const prod = document.getElementById('produit').value;
+            if(pds > 0) {
+                database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
+                ajouterAuLog(`Ndiobo a récolté ${pds}kg de ${prod}`);
+                document.getElementById('poids').value = "";
+                afficherNotification("Récolte enregistrée !");
+            }
+        }
+
+        function calculerTotalVente() {
+            const kg = parseFloat(document.getElementById('poidsVendu').value) || 0;
+            const prx = parseFloat(document.getElementById('prixAuKg').value) || 0;
+            document.getElementById('prixTotalVente').value = kg * prx;
+        }
+
+        function enregistrerVente() {
+            const total = parseFloat(document.getElementById('prixTotalVente').value);
+            const kg = document.getElementById('poidsVendu').value;
+            const prod = document.getElementById('produitVendu').value;
+            if(total > 0) {
+                database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
+                ajouterAuLog(`Vente : ${kg}kg de ${prod} (${total} FCFA)`);
+                database.ref('chat').push({ expediteur: "Ventes", message: `💰 Nouvelle vente : ${total} FCFA` });
+                document.getElementById('poidsVendu').value = ""; document.getElementById('prixAuKg').value = "";
+                afficherNotification("Vente validée !");
+            }
+        }
+
+        function enregistrerDepense() {
+            const mnt = parseFloat(document.getElementById('montantDepense').value);
+            const des = document.getElementById('designationDepense').value;
+            if(mnt > 0) {
+                database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
+                ajouterAuLog(`Dépense : ${des} (${mnt} FCFA)`);
+                let msg = `💸 Dépense : ${des} (${mnt} FCFA)`;
+                if(factureUrl) msg += `<br><img src="${factureUrl}" style="width:100px">`;
+                database.ref('chat').push({ expediteur: "Dépenses", message: msg });
+                document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
+                factureUrl = null; document.getElementById('previewFacture').innerHTML = "";
+            }
+        }
+
+        function pointerEntree() {
+            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            database.ref('pointage').set({ statut: "en_cours", heureEntree: h });
+            ajouterAuLog("Ndiobo est arrivé au champ.");
+        }
+
+        function pointerSortie() {
+            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            database.ref('pointage').update({ statut: "attente_journal", heureSortie: h });
+        }
+
+        function validerJournal() {
+            const txt = document.getElementById('tachesFaites').value;
+            database.ref('pointage').once('value', s => {
+                const p = s.val();
+                let msg = `📢 Rapport Ndiobo (${p.heureEntree}-${p.heureSortie}) : ${txt}`;
+                if(mediaUrl) msg += `<br><img src="${mediaUrl}" style="width:100%">`;
+                database.ref('chat').push({ expediteur: "Journal", message: msg });
+                database.ref('pointage').set({ statut: "non_arrive" });
+                document.getElementById('tachesFaites').value = ""; mediaUrl = null;
+            });
+        }
+
+        function envoyerMessage() {
+            const msg = document.getElementById('msgInput').value;
+            const exp = document.getElementById('expediteur').value;
+            if(msg.trim()) {
+                database.ref('chat').push({ expediteur: exp, message: msg });
+                document.getElementById('msgInput').value = "";
+            }
+        }
+
+        // --- READERS IMAGES ---
+        document.getElementById('mediaCapture').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(ev) { mediaUrl = ev.target.result; document.getElementById('previewContainer').innerHTML = "<p>Photo prête !</p>"; }
+            reader.readAsDataURL(e.target.files[0]);
+        });
+        document.getElementById('factureDepense').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(ev) { factureUrl = ev.target.result; document.getElementById('previewFacture').innerHTML = "<p>Facture jointe !</p>"; }
+            reader.readAsDataURL(e.target.files[0]);
+        });
+    </script>
+</body>
+</html>
