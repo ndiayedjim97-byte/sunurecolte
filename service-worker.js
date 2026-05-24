@@ -1,8 +1,9 @@
-const CACHE_NAME = 'darou-salam-cache-v2'; // Changement de version pour forcer la mise à jour
+const CACHE_NAME = 'dertady-agro-cache-v3'; // Changement de nom et version pour forcer la mise à jour
 const ASSETS = [
   './',
   './index.html',
   './style.css',
+  './logo.png', // AJOUT : On met ton nouveau logo en cache
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
   'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js'
@@ -35,10 +36,10 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CHAT_NOTIFICATION') {
     const options = {
       body: event.data.body,
-      icon: 'https://cdn-icons-png.flaticon.com/512/2740/2740594.png',
-      badge: 'https://cdn-icons-png.flaticon.com/512/2740/2740594.png',
+      icon: './logo.png', // MODIFICATION : Ton nouveau logo s'affichera sur la notification
+      badge: './logo.png', // MODIFICATION : Ton nouveau logo dans la barre d'état
       vibrate: [300, 100, 300],
-      tag: 'darou-salam-chat',
+      tag: 'dertady-agro-chat',
       renotify: true
     };
     self.registration.showNotification(event.data.title, options);
