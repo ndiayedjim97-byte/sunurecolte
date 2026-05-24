@@ -170,35 +170,17 @@
             document.getElementById('dateVente').valueAsDate = now;
             document.getElementById('dateDepense').valueAsDate = now;
 
-            // Demande d'autorisation pour les notifications au chargement
+            // Demande forcée d'autorisation pour les notifications
             if ('Notification' in window) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        console.log('Notifications prêtes pour le chat !');
-                    }
-                });
-            }
-        };
-
-        // --- SYSTEME DE NOTIFICATION PUSH/VISUELLE ---
-        function declencherNotificationPush(auteur, texte) {
-            const expediteurActuel = document.getElementById('expediteur').value;
-            // On ne déclenche l'alerte que si le message provient d'un autre utilisateur
-            if (auteur !== expediteurActuel) {
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    navigator.serviceWorker.ready.then(registration => {
-                        registration.showNotification(`Darou Salam Chat : ${auteur}`, {
-                            body: texte,
-                            icon: 'https://cdn-icons-png.flaticon.com/512/2740/2740594.png',
-                            vibrate: [200, 100, 200],
-                            badge: 'https://cdn-icons-png.flaticon.com/512/2740/2740594.png',
-                            tag: 'chat-notification',
-                            renotify: true
-                        });
+                if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            afficherNotification("Notifications activées !");
+                        }
                     });
                 }
             }
-        }
+        };
 
         // --- VARIABLES ET NOTIFS ---
         let mediaUrl = null, factureUrl = null, premierChargement = true;
@@ -229,25 +211,40 @@
             premierChargement = false;
         });
 
-        // Version améliorée pour intercepter et notifier en temps réel
+        // 1. Affichage de l'historique du chat
         database.ref('chat').limitToLast(20).on('value', (snap) => {
             const chat = document.getElementById('chatBox'); chat.innerHTML = "";
             const data = snap.val();
             if(data) {
                 Object.keys(data).forEach(k => {
                     const m = data[k];
-                    // Gestion du format d'affichage (si balise HTML présente pour image)
                     chat.innerHTML += `<div class="msg"><b>${m.expediteur}</b><br>${m.message}</div>`;
                 });
                 chat.scrollTop = chat.scrollHeight;
+            }
+        });
 
-                // Alerte si l'application tourne en tâche de fond ou écran éteint
-                if (!premierChargement && document.hidden) {
-                    const cles = Object.keys(data);
-                    const dernierMessage = data[cles[cles.length - 1]];
-                    // Nettoyage rapide des balises HTML si c'est un rapport avec image
-                    const textePropre = dernierMessage.message.replace(/<[^>]*>/g, ' ');
-                    declencherNotificationPush(dernierMessage.expediteur, textePropre);
+        // 2. Écouteur ultra-précis pour déclencher la vibration/notification en tâche de fond
+        let chatInitialise = false;
+        database.ref('chat').limitToLast(1).on('child_added', (snap) => {
+            if (!chatInitialise) {
+                chatInitialise = true;
+                return; // On ignore le tout dernier message déjà existant au chargement
+            }
+            
+            const nouveauMsg = snap.val();
+            const expediteurActuel = document.getElementById('expediteur').value;
+
+            // On vérifie que l'appli est cachée ET que ce n'est pas nous qui parlons
+            if (document.hidden && nouveauMsg.expediteur !== expediteurActuel) {
+                const textePropre = nouveauMsg.message.replace(/<[^>]*>/g, ' ');
+                
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'CHAT_NOTIFICATION',
+                        title: `Nouveau message de ${nouveauMsg.expediteur}`,
+                        body: textePropre
+                    });
                 }
             }
         });
