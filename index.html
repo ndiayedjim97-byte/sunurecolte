@@ -10,7 +10,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        /* Style de la page de connexion */
         .login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #2e7d32; color: white; display: flex; flex-direction: column;
@@ -25,7 +24,7 @@
             width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd;
             border-radius: 8px; font-size: 1.1rem; text-align: center; box-sizing: border-box;
         }
-        .admin-only, .field-only, .nav-admin { display: none; }
+        .admin-only, .nav-admin { display: none; }
     </style>
 </head>
 <body>
@@ -38,9 +37,9 @@
             
             <select id="selectUserLogin" onchange="detecterUtilisateur()">
                 <option value="">-- Qui êtes-vous ? --</option>
-                <option value="Djim">Djim (Admin)</option>
-                <option value="Moustapha">Moustapha</option>
-                <option value="Ndiobo">Ndiobo</option>
+                <option value="Djim">Djim (Italie - Admin)</option>
+                <option value="Moustapha">Moustapha (Champ)</option>
+                <option value="Ndiobo">Ndiobo (Champ)</option>
             </select>
 
             <div id="codeSection" style="display:none;">
@@ -116,13 +115,11 @@
                     <option value="Gombo">Gombo</option>
                 </select>
                 <input type="number" id="poids" placeholder="Poids en KG">
-                <button onclick="enregistrerRecolte()" class="btn-primary">Enregistrer</button>
+                <button onclick="enregistrerRecolte()" class="btn-primary">Enregistrer Récolte</button>
             </div>
-        </section>
 
-        <section id="tab-finance" class="tab-content admin-only">
-            <div class="card finance-card">
-                <h2><i class="fas fa-shopping-cart"></i> Enregistrer une Vente</h2>
+            <div class="card finance-card" style="border-top: 4px solid #ffa000;">
+                <h2><i class="fas fa-shopping-cart" style="color: #ffa000;"></i> Enregistrer une Vente au Champ</h2>
                 <input type="date" id="dateVente">
                 <select id="produitVendu">
                     <option value="Piment Big Sun">Piment Big Sun</option>
@@ -130,18 +127,20 @@
                 </select>
                 <div class="input-group">
                     <input type="number" id="poidsVendu" placeholder="KG" oninput="calculerTotalVente()">
-                    <input type="number" id="prixAuKg" placeholder="Prix/KG" oninput="calculerTotalVente()">
+                    <input type="number" id="prixAuKg" placeholder="Prix/KG (FCFA)" oninput="calculerTotalVente()">
                 </div>
-                <input type="number" id="prixTotalVente" placeholder="Total FCFA" disabled class="total-input">
-                <button onclick="enregistrerVente()" class="btn-primary">Valider la Vente</button>
+                <input type="number" id="prixTotalVente" placeholder="Total FCFA" disabled class="total-input" style="font-weight:bold; color:#2e7d32;">
+                <button onclick="enregistrerVente()" class="btn-primary" style="background-color: #ffa000;">Valider la Vente</button>
             </div>
+        </section>
 
+        <section id="tab-finance" class="tab-content admin-only">
             <div class="card finance-card expense">
-                <h2><i class="fas fa-minus-circle"></i> Nouvelle Dépense</h2>
+                <h2><i class="fas fa-minus-circle"></i> Enregistrer une Dépense (Intrants, Envoyé...)</h2>
                 <input type="date" id="dateDepense">
-                <input type="text" id="designationDepense" placeholder="Désignation (ex: Engrais)">
+                <input type="text" id="designationDepense" placeholder="Désignation (ex: Engrais, Semences, Carburant)">
                 <input type="number" id="montantDepense" placeholder="Montant FCFA">
-                <label for="factureDepense" class="label-file">🧾 Ajouter Facture</label>
+                <label for="factureDepense" class="label-file">🧾 Ajouter Facture / Reçu</label>
                 <input type="file" id="factureDepense" accept="image/*" style="display:none">
                 <div id="previewFacture"></div>
                 <button onclick="enregistrerDepense()" class="btn-danger">Enregistrer Dépense</button>
@@ -172,7 +171,7 @@
         </div>
         <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)">
             <i class="fas fa-coins"></i>
-            <span>Finances</span>
+            <span>Gestion (Djim)</span>
         </div>
         <div class="nav-item" onclick="switchTab('tab-chat', this)">
             <i class="fas fa-comments"></i>
@@ -194,7 +193,6 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // --- ENREGISTREMENT ET CONNEXION DYNAMIQUE ---
         let utilisateurConnecte = null;
         let codeExisteSurFirebase = false;
 
@@ -209,24 +207,19 @@
                 document.getElementById('codeSection').style.display = 'none';
                 return;
             }
-            
             document.getElementById('secretCodeInput').value = "";
             msgLogin("Vérification sur le serveur...", "orange");
 
-            // On regarde dans Firebase si ce nom a déjà un code secret enregistré
             database.ref('utilisateurs_codes/' + nom).once('value', (snap) => {
                 document.getElementById('codeSection').style.display = 'block';
                 const codeExistant = snap.val();
-                
                 if(codeExistant) {
                     codeExisteSurFirebase = true;
                     document.getElementById('loginStepText').innerText = "Entrez votre code secret";
-                    document.getElementById('btnLoginAction').innerText = "Se connecter";
                     msgLogin("Compte trouvé. Entrez votre code.", "green");
                 } else {
                     codeExisteSurFirebase = false;
                     document.getElementById('loginStepText').innerText = "Créez votre code secret (4 chiffres)";
-                    document.getElementById('btnLoginAction').innerText = "Créer mon code";
                     msgLogin("Première connexion ! Choisissez un code à retenir.", "#2e7d32");
                 }
             });
@@ -242,7 +235,6 @@
             }
 
             if(codeExisteSurFirebase) {
-                // Mode Vérification
                 database.ref('utilisateurs_codes/' + nom).once('value', (snap) => {
                     if(snap.val() === codeSaisi) {
                         localStorage.setItem('userNomDarou', nom);
@@ -253,7 +245,6 @@
                     }
                 });
             } else {
-                // Mode Création de code (Première fois)
                 database.ref('utilisateurs_codes/' + nom).set(codeSaisi, (error) => {
                     if(!error) {
                         localStorage.setItem('userNomDarou', nom);
@@ -272,7 +263,6 @@
             document.getElementById('userNameBadge').innerText = nom;
             document.getElementById('nomExpediteurBloque').innerText = nom;
 
-            // Affichage selon les droits administratifs
             if (nom === 'Djim') {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemFinance').style.display = 'flex';
@@ -283,7 +273,6 @@
             activerDemandeNotifications();
         }
 
-        // --- NAVIGATION LOGIQUE ---
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
@@ -291,19 +280,16 @@
             el.classList.add('active');
         }
 
-        // --- INITIALISATION AU CHARGEMENT ---
         window.onload = function() {
             const now = new Date();
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
             document.getElementById('dateVente').valueAsDate = now;
             document.getElementById('dateDepense').valueAsDate = now;
 
-            // Vérifier si une session existe déjà sur ce téléphone
             const nomSauvegarde = localStorage.getItem('userNomDarou');
             const codeSauvegarde = localStorage.getItem('userCodeDarou');
 
             if (nomSauvegarde && codeSauvegarde) {
-                // On revérifie rapidement sur Firebase pour sécurité
                 database.ref('utilisateurs_codes/' + nomSauvegarde).once('value', (snap) => {
                     if(snap.val() === codeSauvegarde) {
                         ouvrirApplication(nomSauvegarde);
@@ -328,7 +314,6 @@
             }
         }
 
-        // --- VARIABLES ET NOTIFS ---
         let mediaUrl = null, factureUrl = null, premierChargement = true;
 
         function afficherNotification(msg) {
@@ -440,9 +425,10 @@
             const prod = document.getElementById('produitVendu').value;
             if(total > 0) {
                 database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
-                ajouterAuLog(`Vente : ${kg}kg de ${prod} (${total} FCFA)`);
-                database.ref('chat').push({ expediteur: "Ventes", message: `💰 Nouvelle vente : ${total} FCFA` });
+                ajouterAuLog(`Vente au champ par ${utilisateurConnecte} : ${kg}kg de ${prod} (${total} FCFA)`);
+                database.ref('chat').push({ expediteur: "Ventes", message: `💰 ${utilisateurConnecte} a vendu ${kg}kg de ${prod} pour un total de : ${total} FCFA` });
                 document.getElementById('poidsVendu').value = ""; document.getElementById('prixAuKg').value = "";
+                document.getElementById('prixTotalVente').value = "";
                 afficherNotification("Vente validée !");
             }
         }
@@ -452,8 +438,8 @@
             const des = document.getElementById('designationDepense').value;
             if(mnt > 0) {
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
-                ajouterAuLog(`Dépense : ${des} (${mnt} FCFA)`);
-                let msg = `💸 Dépense : ${des} (${mnt} FCFA)`;
+                ajouterAuLog(`Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`);
+                let msg = `💸 Nouvelle dépense ajoutée par Djim : ${des} (${mnt} FCFA)`;
                 if(factureUrl) msg += `<br><img src="${factureUrl}" style="width:100px">`;
                 database.ref('chat').push({ expediteur: "Dépenses", message: msg });
                 document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
