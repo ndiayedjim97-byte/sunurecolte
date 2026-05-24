@@ -257,26 +257,26 @@
             }
         }
 
-        function ouvrirApplication(nom) {
-            utilisateurConnecte = nom;
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('userNameBadge').innerText = nom;
-            document.getElementById('nomExpediteurBloque').innerText = nom;
-
-            // CONFIGURATION STRANGE DES ONGLETS SELON PROFIL
+        function abrirPageInitiale(nom) {
             if (nom === 'Djim') {
-                // Djim voit la gestion financière mais n'a AUCUN ACCÈS au terrain
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
                 document.querySelectorAll('.field-only').forEach(el => el.style.display = 'none');
                 document.getElementById('navItemFinance').style.display = 'flex';
                 document.getElementById('navItemField').style.display = 'none';
             } else {
-                // Le terrain voit la récolte/vente mais n'a aucun accès aux finances globales de Djim
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
                 document.querySelectorAll('.field-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemFinance').style.display = 'none';
                 document.getElementById('navItemField').style.display = 'flex';
             }
+        }
+
+        function ouvrirApplication(nom) {
+            utilisateurConnecte = nom;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('userNameBadge').innerText = nom;
+            document.getElementById('nomExpediteurBloque').innerText = nom;
+            abrirPageInitiale(nom);
             activerDemandeNotifications();
         }
 
@@ -329,12 +329,12 @@
             setTimeout(() => pop.style.display = 'none', 4000);
         }
 
-        // --- SYNCHRONISATION FIREBASE ---
+        // --- SYNCHRONISATION FIREBASE (Sécurisée contre le 'undefined' ou le '0') ---
         database.ref('dashboard').on('value', (snap) => {
-            const d = snap.val() || { totalKilos: 0, totalArgent: 0, totalDepenses: 0 };
-            document.getElementById('totalKilos').innerText = d.totalKilos;
-            document.getElementById('totalArgent').innerText = d.totalArgent.toLocaleString();
-            document.getElementById('totalDepenses').innerText = d.totalDepenses.toLocaleString();
+            const d = snap.val() || {};
+            document.getElementById('totalKilos').innerText = d.totalKilos !== undefined ? d.totalKilos : 0;
+            document.getElementById('totalArgent').innerText = d.totalArgent !== undefined ? d.totalArgent.toLocaleString() : 0;
+            document.getElementById('totalDepenses').innerText = d.totalDepenses !== undefined ? d.totalDepenses.toLocaleString() : 0;
         });
 
         database.ref('logs').limitToLast(15).on('value', (snap) => {
@@ -444,13 +444,15 @@
             const mnt = parseFloat(document.getElementById('montantDepense').value);
             const des = document.getElementById('designationDepense').value;
             if(mnt > 0) {
+                // MISE À JOUR SÉCURISÉE DU TOTAL GLOBAL
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
                 ajouterAuLog(`Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`);
                 let msg = `💸 Nouvelle dépense ajoutée par Djim : ${des} (${mnt} FCFA)`;
                 if(factureUrl) msg += `<br><img src="${factureUrl}" style="width:100px">`;
                 database.ref('chat').push({ expediteur: "Dépenses", message: msg });
                 document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
-                factureUrl = null; document.getElementById('previewFacture').innerHTML = "";
+                factureUrl = null; if(document.getElementById('previewFacture')) document.getElementById('previewFacture').innerHTML = "";
+                afficherNotification("Dépense enregistrée !");
             }
         }
 
