@@ -24,7 +24,7 @@
             width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd;
             border-radius: 8px; font-size: 1.1rem; text-align: center; box-sizing: border-box;
         }
-        .admin-only, .nav-admin, .field-only, .nav-field { display: none; }
+        .admin-only, .nav-admin, .field-only, .nav-field, .ndiobo-only, .nav-ndiobo { display: none; }
         
         .log-img-preview {
             display: block; max-width: 150px; max-height: 150px; 
@@ -37,10 +37,19 @@
         }
         #previewFacture p { color: #2e7d32; font-weight: bold; margin: 5px 0; }
 
-        /* Boutons d'action pour l'historique */
         .log-actions { margin-top: 8px; display: flex; gap: 10px; }
         .btn-log-edit { background: #ffa000; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
         .btn-log-del { background: #d32f2f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
+
+        /* Nouveaux Styles de Stock et Calendrier */
+        .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+        .stock-item { background: #f5f5f5; padding: 10px; border-radius: 8px; text-align: center; border-left: 4px solid #2e7d32; }
+        .stock-item h4 { margin: 0; font-size: 0.9rem; color: #555; }
+        .stock-item p { margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; color: #2e7d32; }
+        .calendar-list { margin-top: 10px; }
+        .calendar-item { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .calendar-item.done { border-left-color: #777; background: #eee; text-decoration: line-through; opacity: 0.7; }
+        .notif-popup { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 30px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; font-size: 0.9rem; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
@@ -55,7 +64,7 @@
                 <option value="">-- Qui êtes-vous ? --</option>
                 <option value="Djim">Djim (Italie - Admin)</option>
                 <option value="Moustapha">Moustapha (Champ)</option>
-                <option value="Ndiobo">Ndiobo (Champ)</option>
+                <option value="Ndiobo">Ndiobo (Technicien)</option>
             </select>
 
             <div id="codeSection" style="display:none;">
@@ -66,7 +75,7 @@
         </div>
     </div>
 
-    <div id="notificationPopUp" class="notif-box"></div>
+    <div id="alertPopup" class="notif-popup"></div>
 
     <header class="main-header">
         <div class="logo"><i class="fas fa-leaf"></i> <span>Darou Salam Agri-Tech</span></div>
@@ -90,6 +99,21 @@
                 </div>
             </div>
 
+            <div class="card">
+                <h2><i class="fas fa-cubes" style="color:#2e7d32;"></i> État des Stocks au Champ</h2>
+                <div class="stock-grid">
+                    <div class="stock-item"><h4>Engrais (Sacs)</h4><p id="stk-engrais">0</p></div>
+                    <div class="stock-item"><h4>Urée (Sacs)</h4><p id="stk-uree">0</p></div>
+                    <div class="stock-item"><h4>Phyto (Litre)</h4><p id="stk-phyto">0</p></div>
+                    <div class="stock-item"><h4>Carburant (L)</h4><p id="stk-carburant">0</p></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-calendar-check" style="color:#ffa000;"></i> Prochaines Tâches & Alertes</h2>
+                <div id="listePlanningHome" class="calendar-list">Chargement des alertes...</div>
+            </div>
+
             <div class="card history-section">
                 <h2><i class="fas fa-history"></i> Historique Récent</h2>
                 <div id="historique" class="log-list">Connexion...</div>
@@ -97,20 +121,16 @@
         </section>
 
         <section id="tab-field" class="tab-content field-only">
-            <div class="card pointage-card">
-                <h2><i class="fas fa-clock"></i> Pointage & Journal</h2>
-                <div class="pointage-status" id="statusPointage">Statut : Non arrivé</div>
-                <div class="timer-buttons">
-                    <button id="btnEntree" onclick="pointerEntree()" class="btn-in">Arrivée</button>
-                    <button id="btnSortie" onclick="pointerSortie()" class="btn-out" disabled>Départ</button>
-                </div>
-                <textarea id="tachesFaites" placeholder="Qu'as-tu fait aujourd'hui ?" disabled></textarea>
-                <div class="media-upload">
-                    <label for="mediaCapture"><i class="fas fa-camera"></i> Photo du champ</label>
-                    <input type="file" id="mediaCapture" accept="image/*" capture="environment" disabled>
-                    <div id="previewContainer"></div>
-                </div>
-                <button id="btnValiderJournal" onclick="validerJournal()" class="btn-primary" disabled>Valider le Journal</button>
+            <div class="card" style="border-top: 4px solid #2e7d32;">
+                <h2><i class="fas fa-minus-circle" style="color:#2e7d32;"></i> Déclarer une Utilisation de Stock</h2>
+                <select id="choixStockUtilise">
+                    <option value="engrais">Engrais (Sacs)</option>
+                    <option value="uree">Urée (Sacs)</option>
+                    <option value="phyto">Produit Phyto (Litre)</option>
+                    <option value="carburant">Carburant (Litre)</option>
+                </select>
+                <input type="number" id="quantiteUtilisee" placeholder="Quantité utilisée (ex: 2)">
+                <button onclick="declarerUtilisationStock()" class="btn-primary" style="background:#2e7d32;">Valider l'utilisation</button>
             </div>
 
             <div class="card">
@@ -139,14 +159,42 @@
             </div>
         </section>
 
+        <section id="tab-technicien" class="tab-content ndiobo-only">
+            <div class="card" style="border-top: 4px solid #ffa000;">
+                <h2><i class="fas fa-calendar-plus" style="color:#ffa000;"></i> Planifier un Entretien / Traitement (Ndiobo)</h2>
+                <input type="date" id="datePlanning">
+                <select id="typeEntretien">
+                    <option value="Traitement Phyto">Traitement Phytosanitaire</option>
+                    <option value="Apport Engrais / Urée">Apport Engrais / Urée</option>
+                    <option value="Gros Arrosage / Irrigation">Gros Arrosage / Irrigation</option>
+                    <option value="Entretien / Désherbage">Entretien / Désherbage</option>
+                    <option value="Préparation Récolte">Préparation Récolte</option>
+                </select>
+                <input type="text" id="detailsEntretien" placeholder="Précisions (ex: Piment blocs A et B, dose 2L)">
+                <button onclick="ajouterDateCalendrier()" class="btn-primary" style="background:#ffa000;">Fixer la Date & Notifier l'équipe</button>
+            </div>
+        </section>
+
         <section id="tab-finance" class="tab-content admin-only">
             <div class="card finance-card expense">
                 <h2 id="titleFormDepense"><i class="fas fa-minus-circle"></i> Enregistrer une Dépense (Intrants, Envoyé...)</h2>
                 <input type="hidden" id="editKeyDepense" value="">
                 <input type="date" id="dateDepense">
-                <input type="text" id="designationDepense" placeholder="Désignation (ex: Engrais, Semences, Carburant)">
+                <input type="text" id="designationDepense" placeholder="Désignation (ex: 5 sacs Engrais, Carburant)">
                 <input type="number" id="montantDepense" placeholder="Montant FCFA">
                 
+                <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #ffe0b2;">
+                    <p style="margin:0 0 5px 0; font-weight:bold; font-size:0.85rem; color:#e65100;">📦 Cette dépense ajoute-t-elle du stock au champ ?</p>
+                    <select id="stockLieALaDepense">
+                        <option value="">-- Non, aucun impact stock --</option>
+                        <option value="engrais">Oui -> Alimenter Engrais (Sacs)</option>
+                        <option value="uree">Oui -> Alimenter Urée (Sacs)</option>
+                        <option value="phyto">Oui -> Alimenter Phyto (Litres)</option>
+                        <option value="carburant">Oui -> Alimenter Carburant (Litres)</option>
+                    </select>
+                    <input type="number" id="quantiteLieeAAlimenter" placeholder="Quantité achetée (ex: 5)" style="margin-top:5px;">
+                </div>
+
                 <label for="factureDepense" class="label-file"><i class="fas fa-camera"></i> Ajouter Capture ou Reçu</label>
                 <input type="file" id="factureDepense" accept="image/*" style="display:none">
                 <div id="previewFacture"></div>
@@ -172,7 +220,8 @@
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('tab-home', this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
         <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)"><i class="fas fa-tractor"></i><span>Terrain</span></div>
-        <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)"><i class="fas fa-coins"></i><span>Gestion (Djim)</span></div>
+        <div class="nav-item nav-ndiobo" id="navItemTechnicien" onclick="switchTab('tab-technicien', this)"><i class="fas fa-calendar-alt"></i><span>Planning</span></div>
+        <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)"><i class="fas fa-coins"></i><span>Gestion</span></div>
         <div class="nav-item" onclick="switchTab('tab-chat', this)"><i class="fas fa-comments"></i><span>Chat</span></div>
     </nav>
 
@@ -197,6 +246,13 @@
         function msgLogin(txt, couleur) {
             const m = document.getElementById('loginMessage');
             m.innerText = txt; m.style.color = couleur; m.style.display = 'block';
+        }
+
+        function triggerPopupNotification(message) {
+            const pop = document.getElementById('alertPopup');
+            pop.innerText = message;
+            pop.style.display = "block";
+            setTimeout(() => { pop.style.display = "none"; }, 5000);
         }
 
         function detecterUtilisateur() {
@@ -249,15 +305,21 @@
             document.getElementById('userNameBadge').innerText = nom;
             document.getElementById('nomExpediteurBloque').innerText = nom;
             
+            // Masquage et affichage dynamique selon les rôles exclusifs
+            document.querySelectorAll('.admin-only, .field-only, .ndiobo-only').forEach(el => el.style.display = 'none');
+            document.getElementById('navItemFinance').style.display = 'none';
+            document.getElementById('navItemField').style.display = 'none';
+            document.getElementById('navItemTechnicien').style.display = 'none';
+
             if (nom === 'Djim') {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-                document.querySelectorAll('.field-only').forEach(el => el.style.display = 'none');
                 document.getElementById('navItemFinance').style.display = 'flex';
-                document.getElementById('navItemField').style.display = 'none';
-            } else {
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            } else if (nom === 'Ndiobo') {
+                document.querySelectorAll('.field-only, .ndiobo-only').forEach(el => el.style.display = 'block');
+                document.getElementById('navItemField').style.display = 'flex';
+                document.getElementById('navItemTechnicien').style.display = 'flex';
+            } else { // Moustapha
                 document.querySelectorAll('.field-only').forEach(el => el.style.display = 'block');
-                document.getElementById('navItemFinance').style.display = 'none';
                 document.getElementById('navItemField').style.display = 'flex';
             }
         }
@@ -274,6 +336,7 @@
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
             document.getElementById('dateVente').valueAsDate = now;
             document.getElementById('dateDepense').valueAsDate = now;
+            if(document.getElementById('datePlanning')) document.getElementById('datePlanning').valueAsDate = now;
 
             const nomSauvegarde = localStorage.getItem('userNomDarou');
             const codeSauvegarde = localStorage.getItem('userCodeDarou');
@@ -281,12 +344,51 @@
             else document.getElementById('loginScreen').style.display = 'flex';
         };
 
-        // --- ECOUTEURS FIREBASE ---
+        // --- ÉCOUTEURS FIREBASE ---
         database.ref('dashboard').on('value', (snap) => {
             const d = snap.val() || {};
             document.getElementById('totalKilos').innerText = d.totalKilos || 0;
             document.getElementById('totalArgent').innerText = (d.totalArgent || 0).toLocaleString();
             document.getElementById('totalDepenses').innerText = (d.totalDepenses || 0).toLocaleString();
+        });
+
+        // Suivi Realtime des Stocks
+        database.ref('stocks').on('value', (snap) => {
+            const s = snap.val() || {};
+            document.getElementById('stk-engrais').innerText = s.engrais || 0;
+            document.getElementById('stk-uree').innerText = s.uree || 0;
+            document.getElementById('stk-phyto').innerText = s.phyto || 0;
+            document.getElementById('stk-carburant').innerText = s.carburant || 0;
+        });
+
+        // Suivi et affichage dynamique du planning et alertes de Ndiobo
+        database.ref('planning').limitToLast(10).on('value', (snap) => {
+            const box = document.getElementById('listePlanningHome'); box.innerHTML = "";
+            const data = snap.val();
+            if(!data) { box.innerHTML = "<p style='color:#777;font-style:italic;'>Aucune tâche planifiée.</p>"; return; }
+            
+            // Détection de nouvelle planification pour déclencher l'alerte visuelle
+            if(!premierChargement && utilisateurConnecte !== 'Ndiobo') {
+                triggerPopupNotification("🔔 Ndiobo a mis à jour le planning d'entretien !");
+            }
+            premierChargement = false;
+
+            Object.keys(data).reverse().forEach(k => {
+                const t = data[k];
+                const estFait = t.statut === "termine";
+                let btnAction = "";
+                if(utilisateurConnecte === 'Ndiobo' && !estFait) {
+                    btnAction = `<button style="background:#2e7d32;color:white;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;" onclick="marquerTacheTerminee('${k}')">Fait ✓</button>`;
+                }
+                box.innerHTML += `
+                    <div class="calendar-item ${estFait ? 'done' : ''}">
+                        <div>
+                            <strong style="color:#e65100;">[${t.dateFormate}]</strong> <b>${t.type}</b><br>
+                            <span style="font-size:0.85rem;color:#555;">${t.details}</span>
+                        </div>
+                        <div>${btnAction}</div>
+                    </div>`;
+            });
         });
 
         database.ref('logs').limitToLast(20).on('value', (snap) => {
@@ -297,10 +399,8 @@
                     const item = data[k];
                     let logImg = item.photoStr ? `<br><img src="${item.photoStr}" class="log-img-preview" onclick="window.open('${item.photoStr}', '_blank')">` : "";
                     
-                    // RECONNAISSANCE ROBUSTE : Si la ligne contient "Dépense", Djim peut la modifier/supprimer
                     let actionsHtml = "";
                     if(utilisateurConnecte === 'Djim' && (item.typeItem === 'depense' || (item.texte && item.texte.includes("Dépense")))) {
-                        // Détection ou fallbacks des montants/textes pour les anciennes lignes
                         let bMontant = item.brutMontant;
                         if(!bMontant && item.texte) {
                             const match = item.texte.match(/\((\d+)\s*FCFA\)/);
@@ -335,17 +435,19 @@
             }
         });
 
-        // --- ACTIONS GESTION DEPENSES ---
+        // --- ENREGISTREMENT ET ALIMENTATION STOCKS VIA FORMULAIRE DJIM ---
         function enregistrerDepense() {
             const mnt = parseFloat(document.getElementById('montantDepense').value);
             const des = document.getElementById('designationDepense').value;
             const dtDepense = document.getElementById('dateDepense').value;
             const editKey = document.getElementById('editKeyDepense').value;
+            const stockChoisi = document.getElementById('stockLieALaDepense').value;
+            const qteAlimenter = parseFloat(document.getElementById('quantiteLieeAAlimenter').value) || 0;
             
             if(!mnt || !des || !dtDepense) { alert("Veuillez remplir tous les champs !"); return; }
             
             const parts = dtDepense.split('-');
-            const dateFormate = parts[2] + "/" + parts[1] + "/" + parts[0];
+            const dateFormate = parts[2] + "/" + parts[1];
 
             if(editKey) {
                 database.ref('logs/' + editKey).once('value', s => {
@@ -359,7 +461,7 @@
                     database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - ancienMontant + mnt);
                     database.ref('logs/' + editKey).update({
                         typeItem: 'depense',
-                        dateLog: dateFormate.substring(0, 5), // Format court JJ/MM
+                        dateLog: dateFormate,
                         texte: `Dépense par Djim : ${des} (${mnt} FCFA)`,
                         brutDate: dtDepense,
                         brutDesignation: des,
@@ -368,15 +470,20 @@
                     });
                     
                     annulanterToutFormDepense();
-                    alert("Enregistrement modifié avec succès !");
+                    alert("Enregistrement modifié !");
                 });
             } else {
                 const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
                 
+                // Si Djim spécifie que c'est de l'achat de matériel/intrants en stock
+                if(stockChoisi && qteAlimenter > 0) {
+                    database.ref('stocks/' + stockChoisi).transaction(cur => (cur || 0) + qteAlimenter);
+                }
+
                 database.ref('logs').push({
                     typeItem: 'depense',
-                    dateLog: dateFormate.substring(0, 5),
+                    dateLog: dateFormate,
                     heure: h,
                     texte: `Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`,
                     brutDate: dtDepense,
@@ -387,11 +494,81 @@
 
                 database.ref('chat').push({
                     expediteur: "Dépenses",
-                    message: `💸 Nouvelle dépense ajoutée par Djim : ${des} (${mnt} FCFA) [Date: ${dateFormate}]`
+                    message: `💸 Nouvelle dépense : ${des} (${mnt} FCFA). Stock mis à jour.`
                 });
 
                 annulanterToutFormDepense();
             }
+        }
+
+        // --- GESTION DU CALENDRIER PAR NDIOBO ---
+        function ajouterDateCalendrier() {
+            const dt = document.getElementById('datePlanning').value;
+            const type = document.getElementById('typeEntretien').value;
+            const details = document.getElementById('detailsEntretien').value;
+
+            if(!dt || !details) { alert("Veuillez choisir une date et mettre des précisions !"); return; }
+            
+            const parts = dt.split('-');
+            const dateFormate = parts[2] + "/" + parts[1];
+
+            database.ref('planning').push({
+                dateBrute: dt,
+                dateFormate: dateFormate,
+                type: type,
+                details: details,
+                statut: "planifie",
+                planificateur: "Ndiobo"
+            });
+
+            // Envoi de la notification automatique dans le chat général
+            database.ref('chat').push({
+                expediteur: "⚠️ PLANNING",
+                message: `📅 Le technicien Ndiobo a fixé une date d'entretien : *${type}* le **${dateFormate}** (${details}).`
+            });
+
+            document.getElementById('detailsEntretien').value = "";
+            switchTab('tab-home', document.querySelector('.nav-item'));
+            triggerPopupNotification("Planning ajouté et équipe notifiée !");
+        }
+
+        function marquerTacheTerminee(key) {
+            database.ref('planning/' + key).update({ statut: "termine" });
+            database.ref('chat').push({
+                expediteur: "✓ PLANNING",
+                message: `✅ Ndiobo a validé et terminé la tâche planifiée.`
+            });
+        }
+
+        // --- UTILSATION DES STOCKS AU CHAMP ---
+        function declarerUtilisationStock() {
+            const type = document.getElementById('choixStockUtilise').value;
+            const qte = parseFloat(document.getElementById('quantiteUtilisee').value);
+
+            if(!qte || qte <= 0) { alert("Entrez une quantité valide !"); return; }
+
+            database.ref('stocks/' + type).transaction(cur => {
+                if((cur || 0) < qte) {
+                    alert("Alerte : Le stock disponible est insuffisant !");
+                    return cur;
+                }
+                return cur - qte;
+            }, (error, committed) => {
+                if(committed) {
+                    const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+                    
+                    database.ref('logs').push({
+                        typeItem: 'stock',
+                        dateLog: d,
+                        heure: h,
+                        texte: `📦 Stock utilisé par ${utilisateurConnecte} : -${qte} ${type}`
+                    });
+
+                    document.getElementById('quantiteUtilisee').value = "";
+                    triggerPopupNotification("Stock déduit avec succès !");
+                }
+            });
         }
 
         function chargerModificationDepense(key, dateBrute, designation, montant, photo) {
@@ -423,6 +600,8 @@
             document.getElementById('montantDepense').value = "";
             document.getElementById('designationDepense').value = "";
             document.getElementById('dateDepense').valueAsDate = new Date();
+            document.getElementById('stockLieALaDepense').value = "";
+            document.getElementById('quantiteLieeAAlimenter').value = "";
             document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-minus-circle"></i> Enregistrer une Dépense`;
             document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer Dépense";
             document.getElementById('btnAnnulerEditDepense').style.display = "none";
@@ -432,7 +611,6 @@
 
         function annulerModificationDepense() { annulanterToutFormDepense(); switchTab('tab-home', document.querySelector('.nav-item')); }
 
-        // --- AUTRES FONCTIONS DU CHAMP ---
         function enregistrerRecolte() {
             const pds = parseFloat(document.getElementById('poids').value);
             const prod = document.getElementById('produit').value;
