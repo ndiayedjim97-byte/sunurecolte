@@ -25,6 +25,18 @@
             border-radius: 8px; font-size: 1.1rem; text-align: center; box-sizing: border-box;
         }
         .admin-only, .nav-admin, .field-only, .nav-field { display: none; }
+        
+        /* Style pour l'affichage des captures dans l'historique */
+        .log-img-preview {
+            display: block; max-width: 150px; max-height: 150px; 
+            border-radius: 5px; margin-top: 5px; border: 1px solid #ddd; cursor: pointer;
+        }
+        .label-file {
+            display: block; background: #e8f5e9; color: #2e7d32; padding: 10px;
+            border-radius: 8px; text-align: center; margin: 10px 0; border: 2px dashed #2e7d32;
+            cursor: pointer; font-weight: bold;
+        }
+        #previewFacture p { color: #2e7d32; font-weight: bold; margin: 5px 0; }
     </style>
 </head>
 <body>
@@ -140,9 +152,11 @@
                 <input type="date" id="dateDepense">
                 <input type="text" id="designationDepense" placeholder="Désignation (ex: Engrais, Semences, Carburant)">
                 <input type="number" id="montantDepense" placeholder="Montant FCFA">
-                <label for="factureDepense" class="label-file">🧾 Ajouter Facture / Reçu</label>
+                
+                <label for="factureDepense" class="label-file"><i class="fas fa-camera"></i> Ajouter Capture ou Reçu</label>
                 <input type="file" id="factureDepense" accept="image/*" style="display:none">
                 <div id="previewFacture"></div>
+                
                 <button onclick="enregistrerDepense()" class="btn-danger">Enregistrer Dépense</button>
             </div>
         </section>
@@ -329,7 +343,7 @@
             setTimeout(() => pop.style.display = 'none', 4000);
         }
 
-        // --- SYNCHRONISATION FIREBASE (Sécurisée contre le 'undefined' ou le '0') ---
+        // --- SYNCHRONISATION FIREBASE ---
         database.ref('dashboard').on('value', (snap) => {
             const d = snap.val() || {};
             document.getElementById('totalKilos').innerText = d.totalKilos !== undefined ? d.totalKilos : 0;
@@ -342,7 +356,12 @@
             const data = snap.val();
             if(data) {
                 Object.keys(data).reverse().forEach(k => {
-                    hist.innerHTML += `<div class="log-item"><b>${data[k].heure}</b> : ${data[k].texte}</div>`;
+                    let logImg = "";
+                    if(data[k].photoStr) {
+                        logImg = `<br><img src="${data[k].photoStr}" class="log-img-preview" onclick="window.open('${data[k].photoStr}', '_blank')">`;
+                    }
+                    // AFFICHAGE DE LA DATE + HEURE + LOG + IMAGE S'IL Y EN A UNE
+                    hist.innerHTML += `<div class="log-item"><b>[${data[k].dateLog || '---'}] ${data[k].heure}</b> : ${data[k].texte}${logImg}</div>`;
                 });
                 if(!premierChargement) afficherNotification("Mise à jour reçue !");
             }
@@ -402,10 +421,14 @@
         });
 
         // --- ACTIONS ---
-        function ajouterAuLog(texte) {
+        function ajouterAuLog(texte, photoBase64 = null, datePrecise = null) {
+            const d = new Date();
+            const dateDuJour = datePrecise || d.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
             database.ref('logs').push({
-                heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                texte: texte
+                dateLog: dateDuJour,
+                heure: d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                texte: texte,
+                photoStr: photoBase64
             });
         }
 
@@ -430,9 +453,17 @@
             const total = parseFloat(document.getElementById('prixTotalVente').value);
             const kg = document.getElementById('poidsVendu').value;
             const prod = document.getElementById('produitVendu').value;
+            const dtVente = document.getElementById('dateVente').value;
+            
+            let dateFormate = null;
+            if(dtVente) {
+                const parts = dtVente.split('-');
+                dateFormate = parts[2] + "/" + parts[1];
+            }
+
             if(total > 0) {
                 database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
-                ajouterAuLog(`Vente au champ par ${utilisateurConnecte} : ${kg}kg de ${prod} (${total} FCFA)`);
+                ajouterAuLog(`Vente au champ par ${utilisateurConnecte} : ${kg}kg de ${prod} (${total} FCFA)`, null, dateFormate);
                 database.ref('chat').push({ expediteur: "Ventes", message: `💰 ${utilisateurConnecte} a vendu ${kg}kg de ${prod} pour un total de : ${total} FCFA` });
                 document.getElementById('poidsVendu').value = ""; document.getElementById('prixAuKg').value = "";
                 document.getElementById('prixTotalVente').value = "";
@@ -443,13 +474,24 @@
         function enregistrerDepense() {
             const mnt = parseFloat(document.getElementById('montantDepense').value);
             const des = document.getElementById('designationDepense').value;
+            const dtDepense = document.getElementById('dateDepense').value;
+            
+            let dateFormate = null;
+            if(dtDepense) {
+                const parts = dtDepense.split('-');
+                dateFormate = parts[2] + "/" + parts[1]; // Format "JJ/MM"
+            }
+
             if(mnt > 0) {
-                // MISE À JOUR SÉCURISÉE DU TOTAL GLOBAL
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
-                ajouterAuLog(`Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`);
+                
+                // On passe la capture d'écran "factureUrl" directement dans l'historique !
+                ajouterAuLog(`Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`, factureUrl, dateFormate);
+                
                 let msg = `💸 Nouvelle dépense ajoutée par Djim : ${des} (${mnt} FCFA)`;
                 if(factureUrl) msg += `<br><img src="${factureUrl}" style="width:100px">`;
                 database.ref('chat').push({ expediteur: "Dépenses", message: msg });
+                
                 document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
                 factureUrl = null; if(document.getElementById('previewFacture')) document.getElementById('previewFacture').innerHTML = "";
                 afficherNotification("Dépense enregistrée !");
@@ -498,7 +540,10 @@
         if(document.getElementById('factureDepense')) {
             document.getElementById('factureDepense').addEventListener('change', function(e) {
                 const reader = new FileReader();
-                reader.onload = function(ev) { factureUrl = ev.target.result; document.getElementById('previewFacture').innerHTML = "<p>Facture jointe !</p>"; }
+                reader.onload = function(ev) { 
+                    factureUrl = ev.target.result; 
+                    document.getElementById('previewFacture').innerHTML = "<p>✅ Capture d'écran attachée avec succès !</p>"; 
+                }
                 reader.readAsDataURL(e.target.files[0]);
             });
         }
