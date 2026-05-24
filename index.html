@@ -24,7 +24,7 @@
             width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd;
             border-radius: 8px; font-size: 1.1rem; text-align: center; box-sizing: border-box;
         }
-        .admin-only, .nav-admin { display: none; }
+        .admin-only, .nav-admin, .field-only, .nav-field { display: none; }
     </style>
 </head>
 <body>
@@ -91,7 +91,7 @@
             </div>
         </section>
 
-        <section id="tab-field" class="tab-content">
+        <section id="tab-field" class="tab-content field-only">
             <div class="card pointage-card">
                 <h2><i class="fas fa-clock"></i> Pointage & Journal</h2>
                 <div class="pointage-status" id="statusPointage">Statut : Non arrivé</div>
@@ -165,7 +165,7 @@
             <i class="fas fa-chart-pie"></i>
             <span>Dashboard</span>
         </div>
-        <div class="nav-item" onclick="switchTab('tab-field', this)">
+        <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)">
             <i class="fas fa-tractor"></i>
             <span>Terrain</span>
         </div>
@@ -263,12 +263,19 @@
             document.getElementById('userNameBadge').innerText = nom;
             document.getElementById('nomExpediteurBloque').innerText = nom;
 
+            // CONFIGURATION STRANGE DES ONGLETS SELON PROFIL
             if (nom === 'Djim') {
+                // Djim voit la gestion financière mais n'a AUCUN ACCÈS au terrain
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                document.querySelectorAll('.field-only').forEach(el => el.style.display = 'none');
                 document.getElementById('navItemFinance').style.display = 'flex';
+                document.getElementById('navItemField').style.display = 'none';
             } else {
+                // Le terrain voit la récolte/vente mais n'a aucun accès aux finances globales de Djim
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.field-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemFinance').style.display = 'none';
+                document.getElementById('navItemField').style.display = 'flex';
             }
             activerDemandeNotifications();
         }
@@ -378,19 +385,19 @@
             const status = document.getElementById('statusPointage');
             const btns = { in: document.getElementById('btnEntree'), out: document.getElementById('btnSortie'), journal: document.getElementById('btnValiderJournal') };
             
-            if(p.statut === "en_cours") {
+            if(p.statut === "en_cours" && status) {
                 status.innerText = "⏳ Au champ depuis " + p.heureEntree;
-                btns.in.disabled = true; btns.out.disabled = false;
-            } else if(p.statut === "attente_journal") {
+                if(btns.in) btns.in.disabled = true; if(btns.out) btns.out.disabled = false;
+            } else if(p.statut === "attente_journal" && status) {
                 status.innerText = "✅ Sortie à " + p.heureSortie + ". Remplis le journal.";
-                btns.out.disabled = true; btns.journal.disabled = false;
-                document.getElementById('tachesFaites').disabled = false;
-                document.getElementById('mediaCapture').disabled = false;
-            } else {
+                if(btns.out) btns.out.disabled = true; if(btns.journal) btns.journal.disabled = false;
+                if(document.getElementById('tachesFaites')) document.getElementById('tachesFaites').disabled = false;
+                if(document.getElementById('mediaCapture')) document.getElementById('mediaCapture').disabled = false;
+            } else if(status) {
                 status.innerText = "😴 Statut : Pas encore arrivé";
-                btns.in.disabled = false; btns.out.disabled = true; btns.journal.disabled = true;
-                document.getElementById('tachesFaites').disabled = true;
-                document.getElementById('mediaCapture').disabled = true;
+                if(btns.in) btns.in.disabled = false; if(btns.out) btns.out.disabled = true; if(btns.journal) btns.journal.disabled = true;
+                if(document.getElementById('tachesFaites')) document.getElementById('tachesFaites').disabled = true;
+                if(document.getElementById('mediaCapture')) document.getElementById('mediaCapture').disabled = true;
             }
         });
 
@@ -479,16 +486,20 @@
         }
 
         // --- READERS IMAGES ---
-        document.getElementById('mediaCapture').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = function(ev) { mediaUrl = ev.target.result; document.getElementById('previewContainer').innerHTML = "<p>Photo prête !</p>"; }
-            reader.readAsDataURL(e.target.files[0]);
-        });
-        document.getElementById('factureDepense').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = function(ev) { factureUrl = ev.target.result; document.getElementById('previewFacture').innerHTML = "<p>Facture jointe !</p>"; }
-            reader.readAsDataURL(e.target.files[0]);
-        });
+        if(document.getElementById('mediaCapture')) {
+            document.getElementById('mediaCapture').addEventListener('change', function(e) {
+                const reader = new FileReader();
+                reader.onload = function(ev) { mediaUrl = ev.target.result; document.getElementById('previewContainer').innerHTML = "<p>Photo prête !</p>"; }
+                reader.readAsDataURL(e.target.files[0]);
+            });
+        }
+        if(document.getElementById('factureDepense')) {
+            document.getElementById('factureDepense').addEventListener('change', function(e) {
+                const reader = new FileReader();
+                reader.onload = function(ev) { factureUrl = ev.target.result; document.getElementById('previewFacture').innerHTML = "<p>Facture jointe !</p>"; }
+                reader.readAsDataURL(e.target.files[0]);
+            });
+        }
     </script>
     <script>
         if ('serviceWorker' in navigator) {
