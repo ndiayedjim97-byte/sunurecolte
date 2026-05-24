@@ -1,0 +1,17 @@
+{
+  "name": "Darou Salam Agri-Tech",
+  "short_name": "DarouSalam",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#2E7D32",
+  "theme_color": "#2E7D32",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2740/2740594.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
