@@ -146,7 +146,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyD9Es0QKcPwMiS46k0XPhWnbwFyiDS4lvE",
             authDomain: "darou-salam-agritech.firebaseapp.com",
-            databaseURL: "https://darou-salam-agritech-default-rtdb.firebaseio.com/",https://console.firebase.google.com/u/0/project/darou-salam-agritech/database/darou-salam-agritech-default-rtdb/data/~2F
+            databaseURL: "https://darou-salam-agritech-default-rtdb.firebaseio.com/",
             projectId: "darou-salam-agritech",
             storageBucket: "darou-salam-agritech.firebasestorage.app",
             messagingSenderId: "771633153001",
@@ -169,7 +169,36 @@
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
             document.getElementById('dateVente').valueAsDate = now;
             document.getElementById('dateDepense').valueAsDate = now;
+
+            // Demande d'autorisation pour les notifications au chargement
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('Notifications prêtes pour le chat !');
+                    }
+                });
+            }
         };
+
+        // --- SYSTEME DE NOTIFICATION PUSH/VISUELLE ---
+        function declencherNotificationPush(auteur, texte) {
+            const expediteurActuel = document.getElementById('expediteur').value;
+            // On ne déclenche l'alerte que si le message provient d'un autre utilisateur
+            if (auteur !== expediteurActuel) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.showNotification(`Darou Salam Chat : ${auteur}`, {
+                            body: texte,
+                            icon: 'https://cdn-icons-png.flaticon.com/512/2740/2740594.png',
+                            vibrate: [200, 100, 200],
+                            badge: 'https://cdn-icons-png.flaticon.com/512/2740/2740594.png',
+                            tag: 'chat-notification',
+                            renotify: true
+                        });
+                    });
+                }
+            }
+        }
 
         // --- VARIABLES ET NOTIFS ---
         let mediaUrl = null, factureUrl = null, premierChargement = true;
@@ -200,15 +229,26 @@
             premierChargement = false;
         });
 
+        // Version améliorée pour intercepter et notifier en temps réel
         database.ref('chat').limitToLast(20).on('value', (snap) => {
             const chat = document.getElementById('chatBox'); chat.innerHTML = "";
             const data = snap.val();
             if(data) {
                 Object.keys(data).forEach(k => {
                     const m = data[k];
+                    // Gestion du format d'affichage (si balise HTML présente pour image)
                     chat.innerHTML += `<div class="msg"><b>${m.expediteur}</b><br>${m.message}</div>`;
                 });
                 chat.scrollTop = chat.scrollHeight;
+
+                // Alerte si l'application tourne en tâche de fond ou écran éteint
+                if (!premierChargement && document.hidden) {
+                    const cles = Object.keys(data);
+                    const dernierMessage = data[cles[cles.length - 1]];
+                    // Nettoyage rapide des balises HTML si c'est un rapport avec image
+                    const textePropre = dernierMessage.message.replace(/<[^>]*>/g, ' ');
+                    declencherNotificationPush(dernierMessage.expediteur, textePropre);
+                }
             }
         });
 
@@ -330,11 +370,11 @@
         });
     </script>
     <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js')
-    .then(() => console.log("Mode hors-ligne pro activé !"))
-    .catch((err) => console.log("Erreur :", err));
-}
-</script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./service-worker.js')
+            .then(() => console.log("Mode hors-ligne pro activé !"))
+            .catch((err) => console.log("Erreur :", err));
+        }
+    </script>
 </body>
 </html>
