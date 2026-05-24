@@ -24,7 +24,7 @@
             width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd;
             border-radius: 8px; font-size: 1.1rem; text-align: center; box-sizing: border-box;
         }
-        .admin-only, .nav-admin, .field-only, .nav-field, .ndiobo-only, .nav-ndiobo { display: none; }
+        .admin-only, .nav-admin, .field-only, .nav-field, .ndiobo-only, .nav-ndiobo, .moustapha-only, .nav-moustapha { display: none; }
         
         .log-img-preview {
             display: block; max-width: 150px; max-height: 150px; 
@@ -45,9 +45,21 @@
         .stock-item { background: #f5f5f5; padding: 10px; border-radius: 8px; text-align: center; border-left: 4px solid #2e7d32; }
         .stock-item h4 { margin: 0; font-size: 0.9rem; color: #555; }
         .stock-item p { margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; color: #2e7d32; }
+        
         .calendar-list { margin-top: 10px; }
         .calendar-item { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
         .calendar-item.done { border-left-color: #777; background: #eee; text-decoration: line-through; opacity: 0.7; }
+        
+        /* Styles spécifiques aux expéditions logistiques */
+        .expedition-card { background: #e3f2fd; border-left: 4px solid #1e88e5; padding: 12px; margin-bottom: 10px; border-radius: 8px; }
+        .expedition-card.recu { background: #e8f5e9; border-left-color: #2e7d32; }
+        .expedition-card h4 { margin: 0 0 5px 0; color: #1565c0; font-size: 1rem; }
+        .expedition-card.recu h4 { color: #2e7d32; }
+        .expedition-card p { margin: 3px 0; font-size: 0.9rem; color: #333; }
+        .badge-status { display: inline-block; padding: 2px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: white; }
+        .status-route { background: #1e88e5; }
+        .status-ok { background: #2e7d32; }
+
         .notif-popup { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 30px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; font-size: 0.9rem; font-weight: bold; text-align: center; }
     </style>
 </head>
@@ -62,7 +74,7 @@
             <select id="selectUserLogin" onchange="detecterUtilisateur()">
                 <option value="">-- Qui êtes-vous ? --</option>
                 <option value="Djim">Djim (Italie - Admin)</option>
-                <option value="Moustapha">Moustapha (Champ)</option>
+                <option value="Moustapha">Moustapha (Dakar)</option>
                 <option value="Ndiobo">Ndiobo (Technicien)</option>
             </select>
 
@@ -133,32 +145,52 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-seedling"></i> Nouvelle Récolte</h2>
-                <select id="produit">
-                    </select>
-                <input type="number" id="poids" placeholder="Poids en KG">
+                <h2><i class="fas fa-seedling"></i> Nouvelle Récolte au Champ</h2>
+                <select id="produit"></select>
+                <input type="number" id="poids" placeholder="Poids récolté en KG">
                 <button onclick="enregistrerRecolte()" class="btn-primary">Enregistrer Récolte</button>
             </div>
 
+            <div class="card" style="border-top: 4px solid #1e88e5; background: #f7faff;">
+                <h2><i class="fas fa-truck-loading" style="color:#1e88e5;"></i> Envoyer une récolte à Dakar (Ndiobo)</h2>
+                <select id="produitExpedie"></select>
+                <input type="number" id="poidsExpedie" placeholder="Poids envoyé (KG)">
+                <input type="text" id="chauffeurExpedie" placeholder="Nom du chauffeur / Numéro véhicule">
+                <button onclick="creerExpeditionDakar()" class="btn-primary" style="background:#1e88e5;">Valider l'envoi vers Dakar</button>
+            </div>
+        </section>
+
+        <section id="tab-dakar" class="tab-content moustapha-only">
+            <div class="card" style="border-top: 4px solid #1e88e5;">
+                <h2><i class="fas fa-boxes" style="color:#1e88e5;"></i> Camions & Colis en provenance du champ</h2>
+                <div id="listeExpeditionsDakar">Chargement des cargaisons...</div>
+            </div>
+
             <div class="card finance-card" style="border-top: 4px solid #ffa000;">
-                <h2><i class="fas fa-shopping-cart" style="color: #ffa000;"></i> Enregistrer une Vente au Champ</h2>
-                <input type="date" id="dateVente">
-                <select id="produitVendu">
-                    </select>
+                <h2><i class="fas fa-shopping-cart" style="color: #ffa000;"></i> Enregistrer une Vente à Dakar (Moustapha)</h2>
+                <input type="date" id="dateVenteDakar">
+                <select id="produitVenduDakar"></select>
                 <div class="input-group">
-                    <input type="number" id="poidsVendu" placeholder="KG" oninput="calculerTotalVente()">
-                    <input type="number" id="prixAuKg" placeholder="Prix/KG (FCFA)" oninput="calculerTotalVente()">
+                    <input type="number" id="poidsVenduDakar" placeholder="KG" oninput="calculerTotalVenteDakar()">
+                    <input type="number" id="prixAuKgDakar" placeholder="Prix/KG (FCFA)" oninput="calculerTotalVenteDakar()">
                 </div>
-                <input type="number" id="prixTotalVente" placeholder="Total FCFA" disabled class="total-input" style="font-weight:bold; color:#2e7d32;">
-                <button onclick="enregistrerVente()" class="btn-primary" style="background-color: #ffa000;">Valider la Vente</button>
+                <input type="number" id="prixTotalVenteDakar" placeholder="Total FCFA" disabled class="total-input" style="font-weight:bold; color:#2e7d32;">
+                <button onclick="enregistrerVenteDakar()" class="btn-primary" style="background-color: #ffa000;">Valider la Vente à Dakar</button>
+            </div>
+
+            <div class="card" style="border-top: 4px solid #d32f2f;">
+                <h2><i class="fas fa-wallet" style="color:#d32f2f;"></i> Enregistrer une Dépense à Dakar (Moustapha)</h2>
+                <p style="margin: 0 0 10px 0; font-size:0.85rem; color:#666;">Pour le transport, l'essence, le déchargement ou les emballages à Dakar.</p>
+                <input type="text" id="desigDepenseDakar" placeholder="Désignation (ex: Payé transporteur Ndiaga)">
+                <input type="number" id="montantDepenseDakar" placeholder="Montant en FCFA">
+                <button onclick="enregistrerDepenseDakar()" class="btn-danger" style="width:100%;">Enregistrer Dépense Dakar</button>
             </div>
         </section>
 
         <section id="tab-technicien" class="tab-content ndiobo-only">
             <div class="card" style="border-top: 4px solid #2e7d32; background: #f1f8e9;">
-                <h2><i class="fas fa-plus-circle" style="color:#2e7d32;"></i> Ajouter une espèce cultivée (Ndiobo)</h2>
-                <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #555;">Ajoutez ici les légumes/fruits semés pour pouvoir enregistrer leurs récoltes.</p>
-                <input type="text" id="nomNouvelleEspece" placeholder="Nom de la culture (ex: Oignon, Tomate, Piment)">
+                <h2><i class="fas fa-plus-circle" style="color:#2e7d32;"></i> Ajouter une espèce cultivée</h2>
+                <input type="text" id="nomNouvelleEspece" placeholder="Nom de la culture (ex: Oignon, Tomate)">
                 <button onclick="ajouterNouvelleEspece()" class="btn-primary" style="background:#2e7d32;">Enregistrer la Culture</button>
             </div>
 
@@ -170,23 +202,22 @@
                     <option value="Apport Engrais / Urée">Apport Engrais / Urée</option>
                     <option value="Gros Arrosage / Irrigation">Gros Arrosage / Irrigation</option>
                     <option value="Entretien / Désherbage">Entretien / Désherbage</option>
-                    <option value="Préparation Récolte">Préparation Récolte</option>
                 </select>
-                <input type="text" id="detailsEntretien" placeholder="Précisions (ex: Piment blocs A et B, dose 2L)">
-                <button onclick="ajouterDateCalendrier()" class="btn-primary" style="background:#ffa000;">Fixer la Date & Notifier l'équipe</button>
+                <input type="text" id="detailsEntretien" placeholder="Précisions (ex: Blocs A et B)">
+                <button onclick="ajouterDateCalendrier()" class="btn-primary" style="background:#ffa000;">Fixer la Date & Notifier</button>
             </div>
         </section>
 
         <section id="tab-finance" class="tab-content admin-only">
             <div class="card finance-card expense">
-                <h2 id="titleFormDepense"><i class="fas fa-minus-circle"></i> Enregistrer une Dépense (Intrants, Envoyé...)</h2>
+                <h2 id="titleFormDepense"><i class="fas fa-minus-circle"></i> Enregistrer une Dépense Générale</h2>
                 <input type="hidden" id="editKeyDepense" value="">
                 <input type="date" id="dateDepense">
-                <input type="text" id="designationDepense" placeholder="Désignation (ex: 5 sacs Engrais, Carburant)">
+                <input type="text" id="designationDepense" placeholder="Désignation (ex: 5 sacs Engrais)">
                 <input type="number" id="montantDepense" placeholder="Montant FCFA">
                 
                 <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #ffe0b2;">
-                    <p style="margin:0 0 5px 0; font-weight:bold; font-size:0.85rem; color:#e65100;">📦 Cette dépense ajoute-t-elle du stock au champ ?</p>
+                    <p style="margin:0 0 5px 0; font-weight:bold; font-size:0.85rem; color:#e65100;">📦 Impact sur le stock au champ ?</p>
                     <select id="stockLieALaDepense">
                         <option value="">-- Non, aucun impact stock --</option>
                         <option value="engrais">Oui -> Alimenter Engrais (Sacs)</option>
@@ -222,6 +253,7 @@
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('tab-home', this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
         <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)"><i class="fas fa-tractor"></i><span>Terrain</span></div>
+        <div class="nav-item nav-moustapha" id="navItemDakar" onclick="switchTab('tab-dakar', this)"><i class="fas fa-store"></i><span>Dakar</span></div>
         <div class="nav-item nav-ndiobo" id="navItemTechnicien" onclick="switchTab('tab-technicien', this)"><i class="fas fa-calendar-alt"></i><span>Planning</span></div>
         <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)"><i class="fas fa-coins"></i><span>Gestion</span></div>
         <div class="nav-item" onclick="switchTab('tab-chat', this)"><i class="fas fa-comments"></i><span>Chat</span></div>
@@ -252,8 +284,7 @@
 
         function triggerPopupNotification(message) {
             const pop = document.getElementById('alertPopup');
-            pop.innerText = message;
-            pop.style.display = "block";
+            pop.innerText = message; pop.style.display = "block";
             setTimeout(() => { pop.style.display = "none"; }, 5000);
         }
 
@@ -307,10 +338,12 @@
             document.getElementById('userNameBadge').innerText = nom;
             document.getElementById('nomExpediteurBloque').innerText = nom;
             
-            document.querySelectorAll('.admin-only, .field-only, .ndiobo-only').forEach(el => el.style.display = 'none');
+            // Masquage par défaut de tous les accès conditionnels
+            document.querySelectorAll('.admin-only, .field-only, .ndiobo-only, .moustapha-only').forEach(el => el.style.display = 'none');
             document.getElementById('navItemFinance').style.display = 'none';
             document.getElementById('navItemField').style.display = 'none';
             document.getElementById('navItemTechnicien').style.display = 'none';
+            document.getElementById('navItemDakar').style.display = 'none';
 
             if (nom === 'Djim') {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
@@ -319,9 +352,9 @@
                 document.querySelectorAll('.field-only, .ndiobo-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemField').style.display = 'flex';
                 document.getElementById('navItemTechnicien').style.display = 'flex';
-            } else { 
-                document.querySelectorAll('.field-only').forEach(el => el.style.display = 'block');
-                document.getElementById('navItemField').style.display = 'flex';
+            } else if (nom === 'Moustapha') {
+                document.querySelectorAll('.moustapha-only').forEach(el => el.style.display = 'block');
+                document.getElementById('navItemDakar').style.display = 'flex';
             }
         }
 
@@ -335,8 +368,8 @@
         window.onload = function() {
             const now = new Date();
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-            document.getElementById('dateVente').valueAsDate = now;
             document.getElementById('dateDepense').valueAsDate = now;
+            if(document.getElementById('dateVenteDakar')) document.getElementById('dateVenteDakar').valueAsDate = now;
             if(document.getElementById('datePlanning')) document.getElementById('datePlanning').valueAsDate = now;
 
             const nomSauvegarde = localStorage.getItem('userNomDarou');
@@ -345,7 +378,7 @@
             else document.getElementById('loginScreen').style.display = 'flex';
         };
 
-        // --- ÉCOUTEURS FIREBASE ---
+        // --- ECOUTEURS FIREBASE DYNAMIQUES ---
         database.ref('dashboard').on('value', (snap) => {
             const d = snap.val() || {};
             document.getElementById('totalKilos').innerText = d.totalKilos || 0;
@@ -361,24 +394,57 @@
             document.getElementById('stk-carburant').innerText = s.carburant || 0;
         });
 
-        // Lecture et synchronisation dynamique des cultures / espèces
         database.ref('especes_cultivees').on('value', (snap) => {
-            const listeRecolte = document.getElementById('produit');
-            const listeVente = document.getElementById('produitVendu');
-            
-            listeRecolte.innerHTML = "";
-            listeVente.innerHTML = "";
+            const listes = [
+                document.getElementById('produit'),
+                document.getElementById('produitExpedie'),
+                document.getElementById('produitVenduDakar')
+            ];
+            listes.forEach(l => { if(l) l.innerHTML = ""; });
 
             let data = snap.val();
-            // Valeurs par défaut si la liste est vide dans Firebase
-            if(!data) {
-                data = { "default1": "Piment Big Sun", "default2": "Gombo" };
-            }
+            if(!data) data = { "d1": "Piment Big Sun", "d2": "Gombo" };
 
             Object.keys(data).forEach(k => {
-                const nomEspece = data[k];
-                listeRecolte.innerHTML += `<option value="${nomEspece}">${nomEspece}</option>`;
-                listeVente.innerHTML += `<option value="${nomEspece}">${nomEspece}</option>`;
+                const nom = data[k];
+                listes.forEach(l => { if(l) l.innerHTML += `<option value="${nom}">${nom}</option>`; });
+            });
+        });
+
+        // Lecture des expéditions en route ou reçues à Dakar
+        database.ref('expeditions').limitToLast(15).on('value', (snap) => {
+            const container = document.getElementById('listeExpeditionsDakar');
+            if(!container) return;
+            container.innerHTML = "";
+            const data = snap.val();
+            if(!data) { container.innerHTML = "<p style='color:#777; font-style:italic;'>Aucun envoi enregistré.</p>"; return; }
+
+            Object.keys(data).reverse().forEach(k => {
+                const ex = data[k];
+                const estRecu = ex.statut === "recu";
+                let actionHtml = "";
+
+                if(utilisateurConnecte === 'Moustapha' && !estRecu) {
+                    actionHtml = `
+                        <div style="margin-top:10px; background:#fff; padding:10px; border-radius:5px; border:1px solid #ccc;">
+                            <label style="font-size:0.8rem; font-weight:bold;">Poids réellement reçu à Dakar (KG) :</label>
+                            <input type="number" id="poidsRecuReal_${k}" value="${ex.poidsEnvoye}" style="width:90px; padding:5px; margin:5px;">
+                            <button onclick="recevoirExpeditionDakar('${k}')" style="background:#2e7d32; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">Valider la réception</button>
+                        </div>`;
+                }
+
+                container.innerHTML += `
+                    <div class="expedition-card ${estRecu ? 'recu' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h4>📦 ${ex.produit}</h4>
+                            <span class="badge-status ${estRecu ? 'status-ok' : 'status-route'}">${estRecu ? 'Reçu ✓' : 'En route 🚛'}</span>
+                        </div>
+                        <p><b>Date Envoi :</b> ${ex.dateEnvoi}</p>
+                        <p><b>Quantité expédiée :</b> ${ex.poidsEnvoye} KG</p>
+                        <p><b>Chauffeur :</b> ${ex.chauffeur}</p>
+                        ${estRecu ? `<p style="color:#2e7d32; font-weight:bold;"><b>Reçu par Moustapha :</b> ${ex.poidsRecu} KG (Perte: ${ex.poidsEnvoye - ex.poidsRecu} KG)</p>` : ''}
+                        ${actionHtml}
+                    </div>`;
             });
         });
 
@@ -386,92 +452,165 @@
             const box = document.getElementById('listePlanningHome'); box.innerHTML = "";
             const data = snap.val();
             if(!data) { box.innerHTML = "<p style='color:#777;font-style:italic;'>Aucune tâche planifiée.</p>"; return; }
-            
-            if(!premierChargement && utilisateurConnecte !== 'Ndiobo') {
-                triggerPopupNotification("🔔 Ndiobo a mis à jour le planning d'entretien !");
-            }
-            premierChargement = false;
 
             Object.keys(data).reverse().forEach(k => {
-                const t = data[k];
-                const estFait = t.statut === "termine";
-                let btnAction = "";
-                if(utilisateurConnecte === 'Ndiobo' && !estFait) {
-                    btnAction = `<button style="background:#2e7d32;color:white;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;" onclick="marquerTacheTerminee('${k}')">Fait ✓</button>`;
-                }
-                box.innerHTML += `
-                    <div class="calendar-item ${estFait ? 'done' : ''}">
-                        <div>
-                            <strong style="color:#e65100;">[${t.dateFormate}]</strong> <b>${t.type}</b><br>
-                            <span style="font-size:0.85rem;color:#555;">${t.details}</span>
-                        </div>
-                        <div>${btnAction}</div>
-                    </div>`;
+                const t = data[k]; const estFait = t.statut === "termine";
+                let btnAction = (utilisateurConnecte === 'Ndiobo' && !estFait) ? `<button style="background:#2e7d32;color:white;border:none;padding:3px 8px;border-radius:4px;" onclick="marquerTacheTerminee('${k}')">Fait ✓</button>` : "";
+                box.innerHTML += `<div class="calendar-item ${estFait ? 'done' : ''}"><div><strong style="color:#e65100;">[${t.dateFormate}]</strong> <b>${t.type}</b><br><span style="font-size:0.85rem;color:#555;">${t.details}</span></div><div>${btnAction}</div></div>`;
             });
         });
 
         database.ref('logs').limitToLast(20).on('value', (snap) => {
-            const hist = document.getElementById('historique'); hist.innerHTML = "";
-            const data = snap.val();
+            const hist = document.getElementById('historique'); hist.innerHTML = ""; const data = snap.val();
             if(data) {
                 Object.keys(data).reverse().forEach(k => {
                     const item = data[k];
                     let logImg = item.photoStr ? `<br><img src="${item.photoStr}" class="log-img-preview" onclick="window.open('${item.photoStr}', '_blank')">` : "";
-                    
                     let actionsHtml = "";
-                    if(utilisateurConnecte === 'Djim' && (item.typeItem === 'depense' || (item.texte && item.texte.includes("Dépense")))) {
-                        let bMontant = item.brutMontant;
-                        if(!bMontant && item.texte) {
-                            const match = item.texte.match(/\((\d+)\s*FCFA\)/);
-                            if(match) bMontant = parseFloat(match[1]);
-                        }
-                        let bDesig = item.brutDesignation || "";
-                        if(!bDesig && item.texte) {
-                            bDesig = item.texte.replace("Dépense par Djim : ", "").replace(`(${bMontant} FCFA)`, "").trim();
-                        }
-                        let bDate = item.brutDate || "2026-05-24";
-
-                        actionsHtml = `
-                            <div class="log-actions">
-                                <button class="btn-log-edit" onclick="chargerModificationDepense('${k}', '${bDate}', '${bDesig.replace(/'/g, "\\'")}', ${bMontant || 0}, '${item.photoStr || ''}')"><i class="fas fa-edit"></i> Modifier</button>
-                                <button class="btn-log-del" onclick="supprimerDepense('${k}', ${bMontant || 0})"><i class="fas fa-trash"></i> Supprimer</button>
-                            </div>`;
+                    if(utilisateurConnecte === 'Djim' && item.typeItem === 'depense') {
+                        actionsHtml = `<div class="log-actions"><button class="btn-log-edit" onclick="chargerModificationDepense('${k}', '${item.brutDate}', '${item.brutDesignation}', ${item.brutMontant})"><i class="fas fa-edit"></i> Modifier</button><button class="btn-log-del" onclick="supprimerDepense('${k}', ${item.brutMontant})"><i class="fas fa-trash"></i> Supprimer</button></div>`;
                     }
-
                     hist.innerHTML += `<div class="log-item"><b>[${item.dateLog || '---'}] ${item.heure || ''}</b> : ${item.texte}${logImg}${actionsHtml}</div>`;
                 });
             }
         });
 
         database.ref('chat').limitToLast(20).on('value', (snap) => {
-            const chat = document.getElementById('chatBox'); chat.innerHTML = "";
-            const data = snap.val();
-            if(data) {
-                Object.keys(data).forEach(k => {
-                    chat.innerHTML += `<div class="msg"><b>${data[k].expediteur}</b><br>${data[k].message}</div>`;
-                });
-                chat.scrollTop = chat.scrollHeight;
-            }
+            const chat = document.getElementById('chatBox'); chat.innerHTML = ""; const data = snap.val();
+            if(data) { Object.keys(data).forEach(k => { chat.innerHTML += `<div class="msg"><b>${data[k].expediteur}</b><br>${data[k].message}</div>`; }); chat.scrollTop = chat.scrollHeight; }
         });
 
-        // --- AJOUT D'UNE ESPECE (FONCTION NDIOBO) ---
+        // --- FONCTIONS LOGISTIQUES ET EXPEDITIONS (Ndiobo ➔ Moustapha) ---
+        function creerExpeditionDakar() {
+            const prod = document.getElementById('produitExpedie').value;
+            const pds = parseFloat(document.getElementById('poidsExpedie').value);
+            const chf = document.getElementById('chauffeurExpedie').value.trim();
+
+            if(!pds || !chf) { alert("Veuillez remplir le poids et le nom du chauffeur !"); return; }
+            const d = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
+
+            database.ref('expeditions').push({
+                produit: prod,
+                poidsEnvoye: pds,
+                chauffeur: chf,
+                dateEnvoi: d,
+                statut: "en_route"
+            });
+
+            database.ref('chat').push({
+                expediteur: "🚛 EXPÉDITION",
+                message: `📢 Ndiobo a expédié **${pds} KG** de **${prod}** vers Dakar avec le chauffeur : *${chf}*. En attente de réception.`
+            });
+
+            document.getElementById('poidsExpedie').value = ""; document.getElementById('chauffeurExpedie').value = "";
+            triggerPopupNotification("Cargaison envoyée et Moustapha notifié !");
+        }
+
+        function recevoirExpeditionDakar(key) {
+            const pdsRecu = parseFloat(document.getElementById('poidsRecuReal_' + key).value);
+            if(!pdsRecu || pdsRecu < 0) { alert("Poids invalide !"); return; }
+
+            database.ref('expeditions/' + key).once('value', (snap) => {
+                const ex = snap.val();
+                database.ref('expeditions/' + key).update({
+                    statut: "recu",
+                    poidsRecu: pdsRecu
+                });
+
+                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+
+                database.ref('logs').push({
+                    typeItem: 'reception',
+                    dateLog: d,
+                    heure: h,
+                    texte: `Moustapha a réceptionné la marchandise à Dakar : ${pdsRecu} KG de ${ex.produit} (Envoyé: ${ex.poidsEnvoye} KG)`
+                });
+
+                database.ref('chat').push({
+                    expediteur: "📦 RÉCEPTION",
+                    message: `✅ Moustapha a reçu la cargaison de **${ex.produit}** à Dakar. Reçu: **${pdsRecu} KG** (Poids départ: ${ex.poidsEnvoye} KG).`
+                });
+            });
+        }
+
+        // --- COMMERCE & LOGISTIQUE MOUSTAPHA (Dakar) ---
+        function calculerTotalVenteDakar() {
+            const kg = parseFloat(document.getElementById('poidsVenduDakar').value) || 0;
+            const prx = parseFloat(document.getElementById('prixAuKgDakar').value) || 0;
+            document.getElementById('prixTotalVenteDakar').value = kg * prx;
+        }
+
+        function enregistrerVenteDakar() {
+            const total = parseFloat(document.getElementById('prixTotalVenteDakar').value);
+            const kg = document.getElementById('poidsVenduDakar').value;
+            const prod = document.getElementById('produitVenduDakar').value;
+            const dt = document.getElementById('dateVenteDakar').value;
+
+            if(!total || !dt) { alert("Champs invalides !"); return; }
+            const parts = dt.split('-'); const dateFormate = parts[2] + "/" + parts[1];
+            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
+            database.ref('logs').push({ typeItem: 'vente', dateLog: dateFormate, heure: h, texte: `Vente Dakar (Moustapha) : ${kg}kg de ${prod} (${total} FCFA)` });
+            database.ref('chat').push({ expediteur: "💰 VENTES DAKAR", message: `🏪 Moustapha a vendu ${kg}kg de ${prod} à Dakar pour un montant de **${total} FCFA**.` });
+
+            document.getElementById('poidsVenduDakar').value = ""; document.getElementById('prixAuKgDakar').value = ""; document.getElementById('prixTotalVenteDakar').value = "";
+        }
+
+        function enregistrerDepenseDakar() {
+            const des = document.getElementById('desigDepenseDakar').value.trim();
+            const mnt = parseFloat(document.getElementById('montantDepenseDakar').value);
+
+            if(!des || !mnt) { alert("Veuillez remplir le libellé et le montant !"); return; }
+            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+
+            database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
+            database.ref('logs').push({ typeItem: 'depense', dateLog: d, heure: h, texte: `Dépense Dakar par Moustapha : ${des} (${mnt} FCFA)` });
+            database.ref('chat').push({ expediteur: "💸 LOGISTIQUE", message: `Moustapha a déclaré une dépense logistique à Dakar : *${des}* (${mnt} FCFA).` });
+
+            document.getElementById('desigDepenseDakar').value = ""; document.getElementById('montantDepenseDakar').value = "";
+            triggerPopupNotification("Dépense enregistrée à Dakar !");
+        }
+
+        // --- FONCTIONS CLASSIQUES RECOLTES / CULTURES (Ndiobo) ---
         function ajouterNouvelleEspece() {
             const nom = document.getElementById('nomNouvelleEspece').value.trim();
-            if(!nom) { alert("Veuillez écrire le nom d'une plante/culture !"); return; }
+            if(!nom) return;
+            database.ref('especes_cultivees').push(nom, () => {
+                database.ref('chat').push({ expediteur: "🌱 CULTURES", message: `🚀 Nouvelle culture disponible : **${nom}**.` });
+                document.getElementById('nomNouvelleEspece').value = "";
+            });
+        }
 
-            database.ref('especes_cultivees').push(nom, (err) => {
-                if(!err) {
-                    database.ref('chat').push({
-                        expediteur: "🌱 CULTURES",
-                        message: `🚀 Ndiobo a ajouté une nouvelle culture sur l'application : **${nom}**. Les formulaires de récolte et vente sont mis à jour !`
-                    });
-                    document.getElementById('nomNouvelleEspece').value = "";
-                    triggerPopupNotification("Nouvelle espèce ajoutée avec succès !");
+        function enregistrerRecolte() {
+            const pds = parseFloat(document.getElementById('poids').value); const prod = document.getElementById('produit').value;
+            if(pds > 0) {
+                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+                database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
+                database.ref('logs').push({ typeItem: 'recolte', dateLog: d, heure: h, texte: `${utilisateurConnecte} a récolté ${pds}kg de ${prod} au champ.` });
+                document.getElementById('poids').value = "";
+                triggerPopupNotification("Récolte stockée !");
+            }
+        }
+
+        function declarerUtilisationStock() {
+            const type = document.getElementById('choixStockUtilise').value; const qte = parseFloat(document.getElementById('quantiteUtilisee').value);
+            if(!qte || qte <= 0) return;
+            database.ref('stocks/' + type).transaction(cur => {
+                if((cur || 0) < qte) { alert("Stock insuffisant !"); return cur; } return cur - qte;
+            }, (err, comm) => {
+                if(comm) {
+                    const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+                    database.ref('logs').push({ typeItem: 'stock', dateLog: d, heure: h, texte: `📦 Stock utilisé au champ : -${qte} ${type}` });
+                    document.getElementById('quantiteUtilisee').value = "";
                 }
             });
         }
 
-        // --- GESTION DEPENSES ---
         function enregistrerDepense() {
             const mnt = parseFloat(document.getElementById('montantDepense').value);
             const des = document.getElementById('designationDepense').value;
@@ -480,222 +619,68 @@
             const stockChoisi = document.getElementById('stockLieALaDepense').value;
             const qteAlimenter = parseFloat(document.getElementById('quantiteLieeAAlimenter').value) || 0;
             
-            if(!mnt || !des || !dtDepense) { alert("Veuillez remplir tous les champs !"); return; }
-            
-            const parts = dtDepense.split('-');
-            const dateFormate = parts[2] + "/" + parts[1];
+            if(!mnt || !des || !dtDepense) return;
+            const parts = dtDepense.split('-'); const dateFormate = parts[2] + "/" + parts[1];
 
             if(editKey) {
                 database.ref('logs/' + editKey).once('value', s => {
-                    let ancienMontant = s.val().brutMontant;
-                    if(!ancienMontant && s.val().texte) {
-                        const match = s.val().texte.match(/\((\d+)\s*FCFA\)/);
-                        if(match) ancienMontant = parseFloat(match[1]);
-                    }
-                    ancienMontant = ancienMontant || 0;
-                    
-                    database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - ancienMontant + mnt);
-                    database.ref('logs/' + editKey).update({
-                        typeItem: 'depense',
-                        dateLog: dateFormate,
-                        texte: `Dépense par Djim : ${des} (${mnt} FCFA)`,
-                        brutDate: dtDepense,
-                        brutDesignation: des,
-                        brutMontant: mnt,
-                        photoStr: factureUrl || s.val().photoStr || null
-                    });
-                    
+                    let anc = s.val().brutMontant || 0;
+                    database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - anc + mnt);
+                    database.ref('logs/' + editKey).update({ dateLog: dateFormate, texte: `Dépense par Djim : ${des} (${mnt} FCFA)`, brutDate: dtDepense, brutDesignation: des, brutMontant: mnt, photoStr: factureUrl || s.val().photoStr || null });
                     annulanterToutFormDepense();
-                    alert("Enregistrement modifié !");
                 });
             } else {
                 const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
-                
-                if(stockChoisi && qteAlimenter > 0) {
-                    database.ref('stocks/' + stockChoisi).transaction(cur => (cur || 0) + qteAlimenter);
-                }
+                if(stockChoisi && qteAlimenter > 0) database.ref('stocks/' + stockChoisi).transaction(cur => (cur || 0) + qteAlimenter);
 
-                database.ref('logs').push({
-                    typeItem: 'depense',
-                    dateLog: dateFormate,
-                    heure: h,
-                    texte: `Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`,
-                    brutDate: dtDepense,
-                    brutDesignation: des,
-                    brutMontant: mnt,
-                    photoStr: factureUrl || null
-                });
-
-                database.ref('chat').push({
-                    expediteur: "Dépenses",
-                    message: `💸 Nouvelle dépense : ${des} (${mnt} FCFA). Stock mis à jour.`
-                });
-
+                database.ref('logs').push({ typeItem: 'depense', dateLog: dateFormate, heure: h, texte: `Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`, brutDate: dtDepense, brutDesignation: des, brutMontant: mnt, photoStr: factureUrl || null });
+                database.ref('chat').push({ expediteur: "Dépenses", message: `💸 Nouvelle dépense générale : ${des} (${mnt} FCFA).` });
                 annulanterToutFormDepense();
             }
         }
 
-        // --- PLANNING NDIOBO ---
         function ajouterDateCalendrier() {
-            const dt = document.getElementById('datePlanning').value;
-            const type = document.getElementById('typeEntretien').value;
-            const details = document.getElementById('detailsEntretien').value;
-
-            if(!dt || !details) { alert("Veuillez choisir une date et mettre des précisions !"); return; }
-            
-            const parts = dt.split('-');
-            const dateFormate = parts[2] + "/" + parts[1];
-
-            database.ref('planning').push({
-                dateBrute: dt,
-                dateFormate: dateFormate,
-                type: type,
-                details: details,
-                statut: "planifie",
-                planificateur: "Ndiobo"
-            });
-
-            database.ref('chat').push({
-                expediteur: "⚠️ PLANNING",
-                message: `📅 Le technicien Ndiobo a fixé une date d'entretien : *${type}* le **${dateFormate}** (${details}).`
-            });
-
+            const dt = document.getElementById('datePlanning').value; const type = document.getElementById('typeEntretien').value; const details = document.getElementById('detailsEntretien').value;
+            if(!dt || !details) return;
+            const parts = dt.split('-'); const dateFormate = parts[2] + "/" + parts[1];
+            database.ref('planning').push({ dateBrute: dt, dateFormate: dateFormate, type: type, details: details, statut: "planifie" });
+            database.ref('chat').push({ expediteur: "⚠️ PLANNING", message: `📅 Calendrier mis à jour : ${type} le ${dateFormate}.` });
             document.getElementById('detailsEntretien').value = "";
-            switchTab('tab-home', document.querySelector('.nav-item'));
-            triggerPopupNotification("Planning ajouté et équipe notifiée !");
         }
 
         function marquerTacheTerminee(key) {
             database.ref('planning/' + key).update({ statut: "termine" });
-            database.ref('chat').push({
-                expediteur: "✓ PLANNING",
-                message: `✅ Ndiobo a validé et terminé la tâche planifiée.`
-            });
+            database.ref('chat').push({ expediteur: "✓ PLANNING", message: `✅ Tâche terminée par Ndiobo.` });
         }
 
-        // --- STOCKS CHAMP ---
-        function declarerUtilisationStock() {
-            const type = document.getElementById('choixStockUtilise').value;
-            const qte = parseFloat(document.getElementById('quantiteUtilisee').value);
-
-            if(!qte || qte <= 0) { alert("Entrez une quantité valide !"); return; }
-
-            database.ref('stocks/' + type).transaction(cur => {
-                if((cur || 0) < qte) {
-                    alert("Alerte : Le stock disponible est insuffisant !");
-                    return cur;
-                }
-                return cur - qte;
-            }, (error, committed) => {
-                if(committed) {
-                    const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-                    
-                    database.ref('logs').push({
-                        typeItem: 'stock',
-                        dateLog: d,
-                        heure: h,
-                        texte: `📦 Stock utilisé par ${utilisateurConnecte} : -${qte} ${type}`
-                    });
-
-                    document.getElementById('quantiteUtilisee').value = "";
-                    triggerPopupNotification("Stock déduit avec succès !");
-                }
-            });
-        }
-
-        function chargerModificationDepense(key, dateBrute, designation, montant, photo) {
+        function chargerModificationDepense(key, dateBrute, designation, montant) {
             switchTab('tab-finance', document.getElementById('navItemFinance'));
-            document.getElementById('editKeyDepense').value = key;
-            document.getElementById('dateDepense').value = dateBrute;
-            document.getElementById('designationDepense').value = designation;
-            document.getElementById('montantDepense').value = montant;
+            document.getElementById('editKeyDepense').value = key; document.getElementById('dateDepense').value = dateBrute;
+            document.getElementById('designationDepense').value = designation; document.getElementById('montantDepense').value = montant;
             document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-edit"></i> Modifier la Dépense`;
             document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer les modifications";
             document.getElementById('btnAnnulerEditDepense').style.display = "block";
-            if(photo) {
-                factureUrl = photo;
-                document.getElementById('previewFacture').innerHTML = "<p>✅ Une capture est déjà associée.</p>";
-            } else {
-                document.getElementById('previewFacture').innerHTML = "";
-            }
         }
 
         function supprimerDepense(key, montant) {
-            if(confirm("Voulez-vous vraiment supprimer définitivement cette dépense ?")) {
-                database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - montant);
-                database.ref('logs/' + key).remove();
-            }
+            if(confirm("Supprimer cette dépense ?")) { database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - montant); database.ref('logs/' + key).remove(); }
         }
 
         function annulanterToutFormDepense() {
-            document.getElementById('editKeyDepense').value = "";
-            document.getElementById('montantDepense').value = "";
-            document.getElementById('designationDepense').value = "";
-            document.getElementById('dateDepense').valueAsDate = new Date();
-            document.getElementById('stockLieALaDepense').value = "";
-            document.getElementById('quantiteLieeAAlimenter').value = "";
+            document.getElementById('editKeyDepense').value = ""; document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
             document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-minus-circle"></i> Enregistrer une Dépense`;
-            document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer Dépense";
-            document.getElementById('btnAnnulerEditDepense').style.display = "none";
-            factureUrl = null;
-            document.getElementById('previewFacture').innerHTML = "";
+            document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer Dépense"; document.getElementById('btnAnnulerEditDepense').style.display = "none";
+            document.getElementById('previewFacture').innerHTML = ""; factureUrl = null;
         }
 
         function annulerModificationDepense() { annulanterToutFormDepense(); switchTab('tab-home', document.querySelector('.nav-item')); }
-
-        function enregistrerRecolte() {
-            const pds = parseFloat(document.getElementById('poids').value);
-            const prod = document.getElementById('produit').value;
-            if(pds > 0) {
-                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-                database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
-                database.ref('logs').push({ typeItem: 'recolte', dateLog: d, heure: h, texte: `${utilisateurConnecte} a récolté ${pds}kg de ${prod}` });
-                document.getElementById('poids').value = "";
-            }
-        }
-
-        function calculerTotalVente() {
-            const kg = parseFloat(document.getElementById('poidsVendu').value) || 0;
-            const prx = parseFloat(document.getElementById('prixAuKg').value) || 0;
-            document.getElementById('prixTotalVente').value = kg * prx;
-        }
-
-        function enregistrerVente() {
-            const total = parseFloat(document.getElementById('prixTotalVente').value);
-            const kg = document.getElementById('poidsVendu').value;
-            const prod = document.getElementById('produitVendu').value;
-            const dtVente = document.getElementById('dateVente').value;
-            if(total > 0 && dtVente) {
-                const parts = dtVente.split('-');
-                const dateFormate = parts[2] + "/" + parts[1];
-                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
-                database.ref('logs').push({ typeItem: 'vente', dateLog: dateFormate, heure: h, texte: `Vente : ${kg}kg de ${prod} (${total} FCFA)` });
-                database.ref('chat').push({ expediteur: "Ventes", message: `💰 Vente au champ : ${kg}kg de ${prod} pour ${total} FCFA` });
-                
-                document.getElementById('poidsVendu').value = ""; document.getElementById('prixAuKg').value = ""; document.getElementById('prixTotalVente').value = "";
-            }
-        }
-
-        function envoyerMessage() {
-            const msg = document.getElementById('msgInput').value;
-            if(msg.trim()) {
-                database.ref('chat').push({ expediteur: utilisateurConnecte, message: msg });
-                document.getElementById('msgInput').value = "";
-            }
-        }
+        function envoyerMessage() { const msg = document.getElementById('msgInput').value; if(msg.trim()) { database.ref('chat').push({ expediteur: utilisateurConnecte, message: msg }); document.getElementById('msgInput').value = ""; } }
 
         if(document.getElementById('factureDepense')) {
             document.getElementById('factureDepense').addEventListener('change', function(e) {
                 const reader = new FileReader();
-                reader.onload = function(ev) { 
-                    factureUrl = ev.target.result; 
-                    document.getElementById('previewFacture').innerHTML = "<p>✅ Capture attachée avec succès !</p>"; 
-                }
+                reader.onload = function(ev) { factureUrl = ev.target.result; document.getElementById('previewFacture').innerHTML = "<p>✅ Capture attachée !</p>"; }
                 reader.readAsDataURL(e.target.files[0]);
             });
         }
