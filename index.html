@@ -9,8 +9,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        /* Style de la page de connexion */
+        .login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #2e7d32; color: white; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999; padding: 20px;
+        }
+        .login-card {
+            background: white; padding: 30px; border-radius: 15px; color: #333;
+            width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .login-card i { color: #2e7d32; font-size: 3rem; margin-bottom: 15px; }
+        .login-card select, .login-card input {
+            width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd;
+            border-radius: 8px; font-size: 1.1rem; text-align: center; box-sizing: border-box;
+        }
+        .admin-only, .field-only, .nav-admin { display: none; }
+    </style>
 </head>
 <body>
+
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <i class="fas fa-leaf"></i>
+            <h2>Darou Salam</h2>
+            <p id="loginStepText">Sélectionnez votre nom</p>
+            
+            <select id="selectUserLogin" onchange="detecterUtilisateur()">
+                <option value="">-- Qui êtes-vous ? --</option>
+                <option value="Djim">Djim (Admin)</option>
+                <option value="Moustapha">Moustapha</option>
+                <option value="Ndiobo">Ndiobo</option>
+            </select>
+
+            <div id="codeSection" style="display:none;">
+                <input type="password" id="secretCodeInput" placeholder="Code à 4 chiffres" pattern="\d*" maxlength="4">
+                <button id="btnLoginAction" onclick="validerConnexionOuInscription()" class="btn-primary" style="width:100%">Valider</button>
+            </div>
+            
+            <p id="loginMessage" style="margin-top: 15px; font-size: 0.9rem; font-weight: bold; display: none;"></p>
+        </div>
+    </div>
 
     <div id="notificationPopUp" class="notif-box"></div>
 
@@ -19,7 +59,10 @@
             <i class="fas fa-leaf"></i>
             <span>Darou Salam Agri-Tech</span>
         </div>
-        <p id="currentDate">-- / -- / ----</p>
+        <div style="text-align: right;">
+            <span id="userNameBadge" style="background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 20px; font-size: 0.8rem; display: block; font-weight: bold; margin-bottom: 2px;">--</span>
+            <p id="currentDate" style="margin:0; font-size: 0.8rem;">-- / -- / ----</p>
+        </div>
     </header>
 
     <main id="appContent">
@@ -31,12 +74,12 @@
                     <p>Récolte Totale</p>
                     <h3 id="totalKilos">0</h3> <span>KG</span>
                 </div>
-                <div class="stat-card income">
+                <div class="stat-card income admin-only">
                     <i class="fas fa-wallet"></i>
                     <p>Revenus</p>
                     <h3 id="totalArgent">0</h3> <span>FCFA</span>
                 </div>
-                <div class="stat-card expense">
+                <div class="stat-card expense admin-only">
                     <i class="fas fa-file-invoice-dollar"></i>
                     <p>Dépenses</p>
                     <h3 id="totalDepenses">0</h3> <span>FCFA</span>
@@ -77,7 +120,7 @@
             </div>
         </section>
 
-        <section id="tab-finance" class="tab-content">
+        <section id="tab-finance" class="tab-content admin-only">
             <div class="card finance-card">
                 <h2><i class="fas fa-shopping-cart"></i> Enregistrer une Vente</h2>
                 <input type="date" id="dateVente">
@@ -110,11 +153,7 @@
                 <div class="chat-header">Discussion Équipe</div>
                 <div id="chatBox" class="chat-box"></div>
                 <div class="chat-footer">
-                    <select id="expediteur">
-                        <option value="Djim">Djim</option>
-                        <option value="Moustapha">Moustapha</option>
-                        <option value="Ndiobo">Ndiobo</option>
-                    </select>
+                    <span id="nomExpediteurBloque" style="font-weight: bold; padding: 0 10px; color: #2e7d32;">--</span>
                     <input type="text" id="msgInput" placeholder="Message...">
                     <button onclick="envoyerMessage()"><i class="fas fa-paper-plane"></i></button>
                 </div>
@@ -131,7 +170,7 @@
             <i class="fas fa-tractor"></i>
             <span>Terrain</span>
         </div>
-        <div class="nav-item" onclick="switchTab('tab-finance', this)">
+        <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)">
             <i class="fas fa-coins"></i>
             <span>Finances</span>
         </div>
@@ -155,6 +194,95 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        // --- ENREGISTREMENT ET CONNEXION DYNAMIQUE ---
+        let utilisateurConnecte = null;
+        let codeExisteSurFirebase = false;
+
+        function msgLogin(txt, couleur) {
+            const m = document.getElementById('loginMessage');
+            m.innerText = txt; m.style.color = couleur; m.style.display = 'block';
+        }
+
+        function detecterUtilisateur() {
+            const nom = document.getElementById('selectUserLogin').value;
+            if(!nom) {
+                document.getElementById('codeSection').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('secretCodeInput').value = "";
+            msgLogin("Vérification sur le serveur...", "orange");
+
+            // On regarde dans Firebase si ce nom a déjà un code secret enregistré
+            database.ref('utilisateurs_codes/' + nom).once('value', (snap) => {
+                document.getElementById('codeSection').style.display = 'block';
+                const codeExistant = snap.val();
+                
+                if(codeExistant) {
+                    codeExisteSurFirebase = true;
+                    document.getElementById('loginStepText').innerText = "Entrez votre code secret";
+                    document.getElementById('btnLoginAction').innerText = "Se connecter";
+                    msgLogin("Compte trouvé. Entrez votre code.", "green");
+                } else {
+                    codeExisteSurFirebase = false;
+                    document.getElementById('loginStepText').innerText = "Créez votre code secret (4 chiffres)";
+                    document.getElementById('btnLoginAction').innerText = "Créer mon code";
+                    msgLogin("Première connexion ! Choisissez un code à retenir.", "#2e7d32");
+                }
+            });
+        }
+
+        function validerConnexionOuInscription() {
+            const nom = document.getElementById('selectUserLogin').value;
+            const codeSaisi = document.getElementById('secretCodeInput').value.trim();
+
+            if(codeSaisi.length < 4 || isNaN(codeSaisi)) {
+                msgLogin("Le code doit contenir exactement 4 chiffres !", "red");
+                return;
+            }
+
+            if(codeExisteSurFirebase) {
+                // Mode Vérification
+                database.ref('utilisateurs_codes/' + nom).once('value', (snap) => {
+                    if(snap.val() === codeSaisi) {
+                        localStorage.setItem('userNomDarou', nom);
+                        localStorage.setItem('userCodeDarou', codeSaisi);
+                        ouvrirApplication(nom);
+                    } else {
+                        msgLogin("Code secret incorrect !", "red");
+                    }
+                });
+            } else {
+                // Mode Création de code (Première fois)
+                database.ref('utilisateurs_codes/' + nom).set(codeSaisi, (error) => {
+                    if(!error) {
+                        localStorage.setItem('userNomDarou', nom);
+                        localStorage.setItem('userCodeDarou', codeSaisi);
+                        ouvrirApplication(nom);
+                    } else {
+                        msgLogin("Erreur d'enregistrement.", "red");
+                    }
+                });
+            }
+        }
+
+        function ouvrirApplication(nom) {
+            utilisateurConnecte = nom;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('userNameBadge').innerText = nom;
+            document.getElementById('nomExpediteurBloque').innerText = nom;
+
+            // Affichage selon les droits administratifs
+            if (nom === 'Djim') {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                document.getElementById('navItemFinance').style.display = 'flex';
+            } else {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                document.getElementById('navItemFinance').style.display = 'none';
+            }
+            activerDemandeNotifications();
+        }
+
         // --- NAVIGATION LOGIQUE ---
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -163,24 +291,42 @@
             el.classList.add('active');
         }
 
-        // --- INITIALISATION & DATE ---
+        // --- INITIALISATION AU CHARGEMENT ---
         window.onload = function() {
             const now = new Date();
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
             document.getElementById('dateVente').valueAsDate = now;
             document.getElementById('dateDepense').valueAsDate = now;
 
-            // Demande forcée d'autorisation pour les notifications
+            // Vérifier si une session existe déjà sur ce téléphone
+            const nomSauvegarde = localStorage.getItem('userNomDarou');
+            const codeSauvegarde = localStorage.getItem('userCodeDarou');
+
+            if (nomSauvegarde && codeSauvegarde) {
+                // On revérifie rapidement sur Firebase pour sécurité
+                database.ref('utilisateurs_codes/' + nomSauvegarde).once('value', (snap) => {
+                    if(snap.val() === codeSauvegarde) {
+                        ouvrirApplication(nomSauvegarde);
+                    } else {
+                        document.getElementById('loginScreen').style.display = 'flex';
+                    }
+                });
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+            }
+        };
+
+        function activerDemandeNotifications() {
             if ('Notification' in window) {
                 if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
                     Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
-                            afficherNotification("Notifications activées !");
+                            afficherNotification("Notifications prêtes !");
                         }
                     });
                 }
             }
-        };
+        }
 
         // --- VARIABLES ET NOTIFS ---
         let mediaUrl = null, factureUrl = null, premierChargement = true;
@@ -211,7 +357,6 @@
             premierChargement = false;
         });
 
-        // 1. Affichage de l'historique du chat
         database.ref('chat').limitToLast(20).on('value', (snap) => {
             const chat = document.getElementById('chatBox'); chat.innerHTML = "";
             const data = snap.val();
@@ -224,25 +369,19 @@
             }
         });
 
-        // 2. Écouteur ultra-précis pour déclencher la vibration/notification en tâche de fond
         let chatInitialise = false;
         database.ref('chat').limitToLast(1).on('child_added', (snap) => {
             if (!chatInitialise) {
                 chatInitialise = true;
-                return; // On ignore le tout dernier message déjà existant au chargement
+                return;
             }
-            
             const nouveauMsg = snap.val();
-            const expediteurActuel = document.getElementById('expediteur').value;
-
-            // On vérifie que l'appli est cachée ET que ce n'est pas nous qui parlons
-            if (document.hidden && nouveauMsg.expediteur !== expediteurActuel) {
+            if (document.hidden && nouveauMsg.expediteur !== utilisateurConnecte) {
                 const textePropre = nouveauMsg.message.replace(/<[^>]*>/g, ' ');
-                
                 if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                     navigator.serviceWorker.controller.postMessage({
                         type: 'CHAT_NOTIFICATION',
-                        title: `Nouveau message de ${nouveauMsg.expediteur}`,
+                        title: `Message de ${nouveauMsg.expediteur}`,
                         body: textePropre
                     });
                 }
@@ -283,7 +422,7 @@
             const prod = document.getElementById('produit').value;
             if(pds > 0) {
                 database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
-                ajouterAuLog(`Ndiobo a récolté ${pds}kg de ${prod}`);
+                ajouterAuLog(`${utilisateurConnecte} a récolté ${pds}kg de ${prod}`);
                 document.getElementById('poids').value = "";
                 afficherNotification("Récolte enregistrée !");
             }
@@ -325,7 +464,7 @@
         function pointerEntree() {
             const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             database.ref('pointage').set({ statut: "en_cours", heureEntree: h });
-            ajouterAuLog("Ndiobo est arrivé au champ.");
+            ajouterAuLog(`${utilisateurConnecte} est arrivé au champ.`);
         }
 
         function pointerSortie() {
@@ -337,7 +476,7 @@
             const txt = document.getElementById('tachesFaites').value;
             database.ref('pointage').once('value', s => {
                 const p = s.val();
-                let msg = `📢 Rapport Ndiobo (${p.heureEntree}-${p.heureSortie}) : ${txt}`;
+                let msg = `📢 Rapport ${utilisateurConnecte} (${p.heureEntree}-${p.heureSortie}) : ${txt}`;
                 if(mediaUrl) msg += `<br><img src="${mediaUrl}" style="width:100%">`;
                 database.ref('chat').push({ expediteur: "Journal", message: msg });
                 database.ref('pointage').set({ statut: "non_arrive" });
@@ -347,9 +486,8 @@
 
         function envoyerMessage() {
             const msg = document.getElementById('msgInput').value;
-            const exp = document.getElementById('expediteur').value;
             if(msg.trim()) {
-                database.ref('chat').push({ expediteur: exp, message: msg });
+                database.ref('chat').push({ expediteur: utilisateurConnecte, message: msg });
                 document.getElementById('msgInput').value = "";
             }
         }
@@ -369,7 +507,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./service-worker.js')
-            .then(() => console.log("Mode hors-ligne pro activé !"))
+            .then(() => console.log("Mode hors-ligne activé !"))
             .catch((err) => console.log("Erreur :", err));
         }
     </script>
