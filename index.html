@@ -38,9 +38,9 @@
         #previewFacture p { color: #2e7d32; font-weight: bold; margin: 5px 0; }
 
         /* Boutons d'action pour l'historique */
-        .log-actions { margin-top: 5px; display: flex; gap: 10px; }
-        .btn-log-edit { background: #ffa000; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-        .btn-log-del { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .log-actions { margin-top: 8px; display: flex; gap: 10px; }
+        .btn-log-edit { background: #ffa000; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
+        .btn-log-del { background: #d32f2f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -297,13 +297,25 @@
                     const item = data[k];
                     let logImg = item.photoStr ? `<br><img src="${item.photoStr}" class="log-img-preview" onclick="window.open('${item.photoStr}', '_blank')">` : "";
                     
-                    // Boutons modifier/supprimer visibles uniquement pour Djim et uniquement sur les dépenses
+                    // RECONNAISSANCE ROBUSTE : Si la ligne contient "Dépense", Djim peut la modifier/supprimer
                     let actionsHtml = "";
-                    if(utilisateurConnecte === 'Djim' && item.typeItem === 'depense') {
+                    if(utilisateurConnecte === 'Djim' && (item.typeItem === 'depense' || (item.texte && item.texte.includes("Dépense")))) {
+                        // Détection ou fallbacks des montants/textes pour les anciennes lignes
+                        let bMontant = item.brutMontant;
+                        if(!bMontant && item.texte) {
+                            const match = item.texte.match(/\((\d+)\s*FCFA\)/);
+                            if(match) bMontant = parseFloat(match[1]);
+                        }
+                        let bDesig = item.brutDesignation || "";
+                        if(!bDesig && item.texte) {
+                            bDesig = item.texte.replace("Dépense par Djim : ", "").replace(`(${bMontant} FCFA)`, "").trim();
+                        }
+                        let bDate = item.brutDate || "2026-05-24";
+
                         actionsHtml = `
                             <div class="log-actions">
-                                <button class="btn-log-edit" onclick="chargerModificationDepense('${k}', '${item.brutDate || ''}', '${item.brutDesignation || ''}', ${item.brutMontant || 0}, '${item.photoStr || ''}')"><i class="fas fa-edit"></i> Modifier</button>
-                                <button class="btn-log-del" onclick="supprimerDepense('${k}', ${item.brutMontant || 0})"><i class="fas fa-trash"></i> Supprimer</button>
+                                <button class="btn-log-edit" onclick="chargerModificationDepense('${k}', '${bDate}', '${bDesig.replace(/'/g, "\\'")}', ${bMontant || 0}, '${item.photoStr || ''}')"><i class="fas fa-edit"></i> Modifier</button>
+                                <button class="btn-log-del" onclick="supprimerDepense('${k}', ${bMontant || 0})"><i class="fas fa-trash"></i> Supprimer</button>
                             </div>`;
                     }
 
@@ -336,15 +348,19 @@
             const dateFormate = parts[2] + "/" + parts[1] + "/" + parts[0];
 
             if(editKey) {
-                // ÉTAPE MODIFICATION : On retire l'ancien montant et on met le nouveau
                 database.ref('logs/' + editKey).once('value', s => {
-                    const ancienMontant = s.val().brutMontant || 0;
-                    const h = s.val().heure;
+                    let ancienMontant = s.val().brutMontant;
+                    if(!ancienMontant && s.val().texte) {
+                        const match = s.val().texte.match(/\((\d+)\s*FCFA\)/);
+                        if(match) ancienMontant = parseFloat(match[1]);
+                    }
+                    ancienMontant = ancienMontant || 0;
                     
                     database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - ancienMontant + mnt);
                     database.ref('logs/' + editKey).update({
-                        dateLog: dateFormate,
-                        texte: `Dépense modifiée par Djim : ${des} (${mnt} FCFA)`,
+                        typeItem: 'depense',
+                        dateLog: dateFormate.substring(0, 5), // Format court JJ/MM
+                        texte: `Dépense par Djim : ${des} (${mnt} FCFA)`,
                         brutDate: dtDepense,
                         brutDesignation: des,
                         brutMontant: mnt,
@@ -352,16 +368,15 @@
                     });
                     
                     annulanterToutFormDepense();
-                    document.getElementById('notificationPopUp').innerText = "Dépense modifiée !";
+                    alert("Enregistrement modifié avec succès !");
                 });
             } else {
-                // ÉTAPE NOUVEAU
                 const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
                 
                 database.ref('logs').push({
                     typeItem: 'depense',
-                    dateLog: dateFormate,
+                    dateLog: dateFormate.substring(0, 5),
                     heure: h,
                     texte: `Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`,
                     brutDate: dtDepense,
@@ -391,6 +406,8 @@
             if(photo) {
                 factureUrl = photo;
                 document.getElementById('previewFacture').innerHTML = "<p>✅ Une capture est déjà associée.</p>";
+            } else {
+                document.getElementById('previewFacture').innerHTML = "";
             }
         }
 
@@ -415,13 +432,13 @@
 
         function annulerModificationDepense() { annulanterToutFormDepense(); switchTab('tab-home', document.querySelector('.nav-item')); }
 
-        // --- AUTRES FONCTIONS DU CHAMP (RESTE INCHANGÉ) ---
+        // --- AUTRES FONCTIONS DU CHAMP ---
         function enregistrerRecolte() {
             const pds = parseFloat(document.getElementById('poids').value);
             const prod = document.getElementById('produit').value;
             if(pds > 0) {
                 const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
                 database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
                 database.ref('logs').push({ typeItem: 'recolte', dateLog: d, heure: h, texte: `${utilisateurConnecte} a récolté ${pds}kg de ${prod}` });
                 document.getElementById('poids').value = "";
@@ -441,7 +458,7 @@
             const dtVente = document.getElementById('dateVente').value;
             if(total > 0 && dtVente) {
                 const parts = dtVente.split('-');
-                const dateFormate = parts[2] + "/" + parts[1] + "/" + parts[0];
+                const dateFormate = parts[2] + "/" + parts[1];
                 const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
                 database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
@@ -465,7 +482,7 @@
                 const reader = new FileReader();
                 reader.onload = function(ev) { 
                     factureUrl = ev.target.result; 
-                    document.getElementById('previewFacture').innerHTML = "<p>✅ Capture attachée !</p>"; 
+                    document.getElementById('previewFacture').innerHTML = "<p>✅ Capture attachée avec succès !</p>"; 
                 }
                 reader.readAsDataURL(e.target.files[0]);
             });
