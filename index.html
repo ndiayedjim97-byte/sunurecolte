@@ -41,7 +41,6 @@
         .btn-log-edit { background: #ffa000; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
         .btn-log-del { background: #d32f2f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
 
-        /* Nouveaux Styles de Stock et Calendrier */
         .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
         .stock-item { background: #f5f5f5; padding: 10px; border-radius: 8px; text-align: center; border-left: 4px solid #2e7d32; }
         .stock-item h4 { margin: 0; font-size: 0.9rem; color: #555; }
@@ -136,9 +135,7 @@
             <div class="card">
                 <h2><i class="fas fa-seedling"></i> Nouvelle Récolte</h2>
                 <select id="produit">
-                    <option value="Piment Big Sun">Piment Big Sun (2000 pieds)</option>
-                    <option value="Gombo">Gombo</option>
-                </select>
+                    </select>
                 <input type="number" id="poids" placeholder="Poids en KG">
                 <button onclick="enregistrerRecolte()" class="btn-primary">Enregistrer Récolte</button>
             </div>
@@ -147,9 +144,7 @@
                 <h2><i class="fas fa-shopping-cart" style="color: #ffa000;"></i> Enregistrer une Vente au Champ</h2>
                 <input type="date" id="dateVente">
                 <select id="produitVendu">
-                    <option value="Piment Big Sun">Piment Big Sun</option>
-                    <option value="Gombo">Gombo</option>
-                </select>
+                    </select>
                 <div class="input-group">
                     <input type="number" id="poidsVendu" placeholder="KG" oninput="calculerTotalVente()">
                     <input type="number" id="prixAuKg" placeholder="Prix/KG (FCFA)" oninput="calculerTotalVente()">
@@ -160,8 +155,15 @@
         </section>
 
         <section id="tab-technicien" class="tab-content ndiobo-only">
+            <div class="card" style="border-top: 4px solid #2e7d32; background: #f1f8e9;">
+                <h2><i class="fas fa-plus-circle" style="color:#2e7d32;"></i> Ajouter une espèce cultivée (Ndiobo)</h2>
+                <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #555;">Ajoutez ici les légumes/fruits semés pour pouvoir enregistrer leurs récoltes.</p>
+                <input type="text" id="nomNouvelleEspece" placeholder="Nom de la culture (ex: Oignon, Tomate, Piment)">
+                <button onclick="ajouterNouvelleEspece()" class="btn-primary" style="background:#2e7d32;">Enregistrer la Culture</button>
+            </div>
+
             <div class="card" style="border-top: 4px solid #ffa000;">
-                <h2><i class="fas fa-calendar-plus" style="color:#ffa000;"></i> Planifier un Entretien / Traitement (Ndiobo)</h2>
+                <h2><i class="fas fa-calendar-plus" style="color:#ffa000;"></i> Planifier un Entretien / Traitement</h2>
                 <input type="date" id="datePlanning">
                 <select id="typeEntretien">
                     <option value="Traitement Phyto">Traitement Phytosanitaire</option>
@@ -305,7 +307,6 @@
             document.getElementById('userNameBadge').innerText = nom;
             document.getElementById('nomExpediteurBloque').innerText = nom;
             
-            // Masquage et affichage dynamique selon les rôles exclusifs
             document.querySelectorAll('.admin-only, .field-only, .ndiobo-only').forEach(el => el.style.display = 'none');
             document.getElementById('navItemFinance').style.display = 'none';
             document.getElementById('navItemField').style.display = 'none';
@@ -318,7 +319,7 @@
                 document.querySelectorAll('.field-only, .ndiobo-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemField').style.display = 'flex';
                 document.getElementById('navItemTechnicien').style.display = 'flex';
-            } else { // Moustapha
+            } else { 
                 document.querySelectorAll('.field-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemField').style.display = 'flex';
             }
@@ -352,7 +353,6 @@
             document.getElementById('totalDepenses').innerText = (d.totalDepenses || 0).toLocaleString();
         });
 
-        // Suivi Realtime des Stocks
         database.ref('stocks').on('value', (snap) => {
             const s = snap.val() || {};
             document.getElementById('stk-engrais').innerText = s.engrais || 0;
@@ -361,13 +361,32 @@
             document.getElementById('stk-carburant').innerText = s.carburant || 0;
         });
 
-        // Suivi et affichage dynamique du planning et alertes de Ndiobo
+        // Lecture et synchronisation dynamique des cultures / espèces
+        database.ref('especes_cultivees').on('value', (snap) => {
+            const listeRecolte = document.getElementById('produit');
+            const listeVente = document.getElementById('produitVendu');
+            
+            listeRecolte.innerHTML = "";
+            listeVente.innerHTML = "";
+
+            let data = snap.val();
+            // Valeurs par défaut si la liste est vide dans Firebase
+            if(!data) {
+                data = { "default1": "Piment Big Sun", "default2": "Gombo" };
+            }
+
+            Object.keys(data).forEach(k => {
+                const nomEspece = data[k];
+                listeRecolte.innerHTML += `<option value="${nomEspece}">${nomEspece}</option>`;
+                listeVente.innerHTML += `<option value="${nomEspece}">${nomEspece}</option>`;
+            });
+        });
+
         database.ref('planning').limitToLast(10).on('value', (snap) => {
             const box = document.getElementById('listePlanningHome'); box.innerHTML = "";
             const data = snap.val();
             if(!data) { box.innerHTML = "<p style='color:#777;font-style:italic;'>Aucune tâche planifiée.</p>"; return; }
             
-            // Détection de nouvelle planification pour déclencher l'alerte visuelle
             if(!premierChargement && utilisateurConnecte !== 'Ndiobo') {
                 triggerPopupNotification("🔔 Ndiobo a mis à jour le planning d'entretien !");
             }
@@ -435,7 +454,24 @@
             }
         });
 
-        // --- ENREGISTREMENT ET ALIMENTATION STOCKS VIA FORMULAIRE DJIM ---
+        // --- AJOUT D'UNE ESPECE (FONCTION NDIOBO) ---
+        function ajouterNouvelleEspece() {
+            const nom = document.getElementById('nomNouvelleEspece').value.trim();
+            if(!nom) { alert("Veuillez écrire le nom d'une plante/culture !"); return; }
+
+            database.ref('especes_cultivees').push(nom, (err) => {
+                if(!err) {
+                    database.ref('chat').push({
+                        expediteur: "🌱 CULTURES",
+                        message: `🚀 Ndiobo a ajouté une nouvelle culture sur l'application : **${nom}**. Les formulaires de récolte et vente sont mis à jour !`
+                    });
+                    document.getElementById('nomNouvelleEspece').value = "";
+                    triggerPopupNotification("Nouvelle espèce ajoutée avec succès !");
+                }
+            });
+        }
+
+        // --- GESTION DEPENSES ---
         function enregistrerDepense() {
             const mnt = parseFloat(document.getElementById('montantDepense').value);
             const des = document.getElementById('designationDepense').value;
@@ -476,7 +512,6 @@
                 const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
                 
-                // Si Djim spécifie que c'est de l'achat de matériel/intrants en stock
                 if(stockChoisi && qteAlimenter > 0) {
                     database.ref('stocks/' + stockChoisi).transaction(cur => (cur || 0) + qteAlimenter);
                 }
@@ -501,7 +536,7 @@
             }
         }
 
-        // --- GESTION DU CALENDRIER PAR NDIOBO ---
+        // --- PLANNING NDIOBO ---
         function ajouterDateCalendrier() {
             const dt = document.getElementById('datePlanning').value;
             const type = document.getElementById('typeEntretien').value;
@@ -521,7 +556,6 @@
                 planificateur: "Ndiobo"
             });
 
-            // Envoi de la notification automatique dans le chat général
             database.ref('chat').push({
                 expediteur: "⚠️ PLANNING",
                 message: `📅 Le technicien Ndiobo a fixé une date d'entretien : *${type}* le **${dateFormate}** (${details}).`
@@ -540,7 +574,7 @@
             });
         }
 
-        // --- UTILSATION DES STOCKS AU CHAMP ---
+        // --- STOCKS CHAMP ---
         function declarerUtilisationStock() {
             const type = document.getElementById('choixStockUtilise').value;
             const qte = parseFloat(document.getElementById('quantiteUtilisee').value);
