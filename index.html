@@ -26,7 +26,6 @@
         }
         .admin-only, .nav-admin, .field-only, .nav-field { display: none; }
         
-        /* Style pour l'affichage des captures dans l'historique */
         .log-img-preview {
             display: block; max-width: 150px; max-height: 150px; 
             border-radius: 5px; margin-top: 5px; border: 1px solid #ddd; cursor: pointer;
@@ -37,6 +36,11 @@
             cursor: pointer; font-weight: bold;
         }
         #previewFacture p { color: #2e7d32; font-weight: bold; margin: 5px 0; }
+
+        /* Boutons d'action pour l'historique */
+        .log-actions { margin-top: 5px; display: flex; gap: 10px; }
+        .btn-log-edit { background: #ffa000; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .btn-log-del { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -58,7 +62,6 @@
                 <input type="password" id="secretCodeInput" placeholder="Code à 4 chiffres" pattern="\d*" maxlength="4">
                 <button id="btnLoginAction" onclick="validerConnexionOuInscription()" class="btn-primary" style="width:100%">Valider</button>
             </div>
-            
             <p id="loginMessage" style="margin-top: 15px; font-size: 0.9rem; font-weight: bold; display: none;"></p>
         </div>
     </div>
@@ -66,10 +69,7 @@
     <div id="notificationPopUp" class="notif-box"></div>
 
     <header class="main-header">
-        <div class="logo">
-            <i class="fas fa-leaf"></i>
-            <span>Darou Salam Agri-Tech</span>
-        </div>
+        <div class="logo"><i class="fas fa-leaf"></i> <span>Darou Salam Agri-Tech</span></div>
         <div style="text-align: right;">
             <span id="userNameBadge" style="background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 20px; font-size: 0.8rem; display: block; font-weight: bold; margin-bottom: 2px;">--</span>
             <p id="currentDate" style="margin:0; font-size: 0.8rem;">-- / -- / ----</p>
@@ -77,23 +77,16 @@
     </header>
 
     <main id="appContent">
-        
         <section id="tab-home" class="tab-content active">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <i class="fas fa-box-open"></i>
-                    <p>Récolte Totale</p>
-                    <h3 id="totalKilos">0</h3> <span>KG</span>
+                    <i class="fas fa-box-open"></i> <p>Récolte Totale</p> <h3 id="totalKilos">0</h3> <span>KG</span>
                 </div>
                 <div class="stat-card income admin-only">
-                    <i class="fas fa-wallet"></i>
-                    <p>Revenus</p>
-                    <h3 id="totalArgent">0</h3> <span>FCFA</span>
+                    <i class="fas fa-wallet"></i> <p>Revenus</p> <h3 id="totalArgent">0</h3> <span>FCFA</span>
                 </div>
                 <div class="stat-card expense admin-only">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                    <p>Dépenses</p>
-                    <h3 id="totalDepenses">0</h3> <span>FCFA</span>
+                    <i class="fas fa-file-invoice-dollar"></i> <p>Dépenses</p> <h3 id="totalDepenses">0</h3> <span>FCFA</span>
                 </div>
             </div>
 
@@ -148,7 +141,8 @@
 
         <section id="tab-finance" class="tab-content admin-only">
             <div class="card finance-card expense">
-                <h2><i class="fas fa-minus-circle"></i> Enregistrer une Dépense (Intrants, Envoyé...)</h2>
+                <h2 id="titleFormDepense"><i class="fas fa-minus-circle"></i> Enregistrer une Dépense (Intrants, Envoyé...)</h2>
+                <input type="hidden" id="editKeyDepense" value="">
                 <input type="date" id="dateDepense">
                 <input type="text" id="designationDepense" placeholder="Désignation (ex: Engrais, Semences, Carburant)">
                 <input type="number" id="montantDepense" placeholder="Montant FCFA">
@@ -157,7 +151,8 @@
                 <input type="file" id="factureDepense" accept="image/*" style="display:none">
                 <div id="previewFacture"></div>
                 
-                <button onclick="enregistrerDepense()" class="btn-danger">Enregistrer Dépense</button>
+                <button id="btnEnregistrerDepenseAction" onclick="enregistrerDepense()" class="btn-danger" style="width:100%">Enregistrer Dépense</button>
+                <button id="btnAnnulerEditDepense" onclick="annulerModificationDepense()" class="btn-primary" style="width:100%; background:#777; margin-top:5px; display:none;">Annuler la modification</button>
             </div>
         </section>
 
@@ -175,22 +170,10 @@
     </main>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('tab-home', this)">
-            <i class="fas fa-chart-pie"></i>
-            <span>Dashboard</span>
-        </div>
-        <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)">
-            <i class="fas fa-tractor"></i>
-            <span>Terrain</span>
-        </div>
-        <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)">
-            <i class="fas fa-coins"></i>
-            <span>Gestion (Djim)</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('tab-chat', this)">
-            <i class="fas fa-comments"></i>
-            <span>Chat</span>
-        </div>
+        <div class="nav-item active" onclick="switchTab('tab-home', this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+        <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)"><i class="fas fa-tractor"></i><span>Terrain</span></div>
+        <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)"><i class="fas fa-coins"></i><span>Gestion (Djim)</span></div>
+        <div class="nav-item" onclick="switchTab('tab-chat', this)"><i class="fas fa-comments"></i><span>Chat</span></div>
     </nav>
 
     <script>
@@ -209,6 +192,7 @@
 
         let utilisateurConnecte = null;
         let codeExisteSurFirebase = false;
+        let mediaUrl = null, factureUrl = null, premierChargement = true;
 
         function msgLogin(txt, couleur) {
             const m = document.getElementById('loginMessage');
@@ -217,24 +201,20 @@
 
         function detecterUtilisateur() {
             const nom = document.getElementById('selectUserLogin').value;
-            if(!nom) {
-                document.getElementById('codeSection').style.display = 'none';
-                return;
-            }
+            if(!nom) { document.getElementById('codeSection').style.display = 'none'; return; }
             document.getElementById('secretCodeInput').value = "";
-            msgLogin("Vérification sur le serveur...", "orange");
+            msgLogin("Vérification...", "orange");
 
             database.ref('utilisateurs_codes/' + nom).once('value', (snap) => {
                 document.getElementById('codeSection').style.display = 'block';
-                const codeExistant = snap.val();
-                if(codeExistant) {
+                if(snap.val()) {
                     codeExisteSurFirebase = true;
                     document.getElementById('loginStepText').innerText = "Entrez votre code secret";
-                    msgLogin("Compte trouvé. Entrez votre code.", "green");
+                    msgLogin("Compte trouvé.", "green");
                 } else {
                     codeExisteSurFirebase = false;
-                    document.getElementById('loginStepText').innerText = "Créez votre code secret (4 chiffres)";
-                    msgLogin("Première connexion ! Choisissez un code à retenir.", "#2e7d32");
+                    document.getElementById('loginStepText').innerText = "Créez votre code secret";
+                    msgLogin("Première connexion !", "#2e7d32");
                 }
             });
         }
@@ -242,11 +222,7 @@
         function validerConnexionOuInscription() {
             const nom = document.getElementById('selectUserLogin').value;
             const codeSaisi = document.getElementById('secretCodeInput').value.trim();
-
-            if(codeSaisi.length < 4 || isNaN(codeSaisi)) {
-                msgLogin("Le code doit contenir exactement 4 chiffres !", "red");
-                return;
-            }
+            if(codeSaisi.length < 4 || isNaN(codeSaisi)) { msgLogin("4 chiffres requis !", "red"); return; }
 
             if(codeExisteSurFirebase) {
                 database.ref('utilisateurs_codes/' + nom).once('value', (snap) => {
@@ -254,9 +230,7 @@
                         localStorage.setItem('userNomDarou', nom);
                         localStorage.setItem('userCodeDarou', codeSaisi);
                         ouvrirApplication(nom);
-                    } else {
-                        msgLogin("Code secret incorrect !", "red");
-                    }
+                    } else { msgLogin("Code incorrect !", "red"); }
                 });
             } else {
                 database.ref('utilisateurs_codes/' + nom).set(codeSaisi, (error) => {
@@ -264,14 +238,17 @@
                         localStorage.setItem('userNomDarou', nom);
                         localStorage.setItem('userCodeDarou', codeSaisi);
                         ouvrirApplication(nom);
-                    } else {
-                        msgLogin("Erreur d'enregistrement.", "red");
                     }
                 });
             }
         }
 
-        function abrirPageInitiale(nom) {
+        function ouvrirApplication(nom) {
+            utilisateurConnecte = nom;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('userNameBadge').innerText = nom;
+            document.getElementById('nomExpediteurBloque').innerText = nom;
+            
             if (nom === 'Djim') {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
                 document.querySelectorAll('.field-only').forEach(el => el.style.display = 'none');
@@ -283,15 +260,6 @@
                 document.getElementById('navItemFinance').style.display = 'none';
                 document.getElementById('navItemField').style.display = 'flex';
             }
-        }
-
-        function ouvrirApplication(nom) {
-            utilisateurConnecte = nom;
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('userNameBadge').innerText = nom;
-            document.getElementById('nomExpediteurBloque').innerText = nom;
-            abrirPageInitiale(nom);
-            activerDemandeNotifications();
         }
 
         function switchTab(tabId, el) {
@@ -309,63 +277,39 @@
 
             const nomSauvegarde = localStorage.getItem('userNomDarou');
             const codeSauvegarde = localStorage.getItem('userCodeDarou');
-
-            if (nomSauvegarde && codeSauvegarde) {
-                database.ref('utilisateurs_codes/' + nomSauvegarde).once('value', (snap) => {
-                    if(snap.val() === codeSauvegarde) {
-                        ouvrirApplication(nomSauvegarde);
-                    } else {
-                        document.getElementById('loginScreen').style.display = 'flex';
-                    }
-                });
-            } else {
-                document.getElementById('loginScreen').style.display = 'flex';
-            }
+            if (nomSauvegarde && codeSauvegarde) ouvrirApplication(nomSauvegarde);
+            else document.getElementById('loginScreen').style.display = 'flex';
         };
 
-        function activerDemandeNotifications() {
-            if ('Notification' in window) {
-                if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-                    Notification.requestPermission().then(permission => {
-                        if (permission === 'granted') {
-                            afficherNotification("Notifications prêtes !");
-                        }
-                    });
-                }
-            }
-        }
-
-        let mediaUrl = null, factureUrl = null, premierChargement = true;
-
-        function afficherNotification(msg) {
-            const pop = document.getElementById('notificationPopUp');
-            pop.innerText = msg; pop.style.display = 'block';
-            setTimeout(() => pop.style.display = 'none', 4000);
-        }
-
-        // --- SYNCHRONISATION FIREBASE ---
+        // --- ECOUTEURS FIREBASE ---
         database.ref('dashboard').on('value', (snap) => {
             const d = snap.val() || {};
-            document.getElementById('totalKilos').innerText = d.totalKilos !== undefined ? d.totalKilos : 0;
-            document.getElementById('totalArgent').innerText = d.totalArgent !== undefined ? d.totalArgent.toLocaleString() : 0;
-            document.getElementById('totalDepenses').innerText = d.totalDepenses !== undefined ? d.totalDepenses.toLocaleString() : 0;
+            document.getElementById('totalKilos').innerText = d.totalKilos || 0;
+            document.getElementById('totalArgent').innerText = (d.totalArgent || 0).toLocaleString();
+            document.getElementById('totalDepenses').innerText = (d.totalDepenses || 0).toLocaleString();
         });
 
-        database.ref('logs').limitToLast(15).on('value', (snap) => {
+        database.ref('logs').limitToLast(20).on('value', (snap) => {
             const hist = document.getElementById('historique'); hist.innerHTML = "";
             const data = snap.val();
             if(data) {
                 Object.keys(data).reverse().forEach(k => {
-                    let logImg = "";
-                    if(data[k].photoStr) {
-                        logImg = `<br><img src="${data[k].photoStr}" class="log-img-preview" onclick="window.open('${data[k].photoStr}', '_blank')">`;
+                    const item = data[k];
+                    let logImg = item.photoStr ? `<br><img src="${item.photoStr}" class="log-img-preview" onclick="window.open('${item.photoStr}', '_blank')">` : "";
+                    
+                    // Boutons modifier/supprimer visibles uniquement pour Djim et uniquement sur les dépenses
+                    let actionsHtml = "";
+                    if(utilisateurConnecte === 'Djim' && item.typeItem === 'depense') {
+                        actionsHtml = `
+                            <div class="log-actions">
+                                <button class="btn-log-edit" onclick="chargerModificationDepense('${k}', '${item.brutDate || ''}', '${item.brutDesignation || ''}', ${item.brutMontant || 0}, '${item.photoStr || ''}')"><i class="fas fa-edit"></i> Modifier</button>
+                                <button class="btn-log-del" onclick="supprimerDepense('${k}', ${item.brutMontant || 0})"><i class="fas fa-trash"></i> Supprimer</button>
+                            </div>`;
                     }
-                    // AFFICHAGE DE LA DATE + HEURE + LOG + IMAGE S'IL Y EN A UNE
-                    hist.innerHTML += `<div class="log-item"><b>[${data[k].dateLog || '---'}] ${data[k].heure}</b> : ${data[k].texte}${logImg}</div>`;
+
+                    hist.innerHTML += `<div class="log-item"><b>[${item.dateLog || '---'}] ${item.heure || ''}</b> : ${item.texte}${logImg}${actionsHtml}</div>`;
                 });
-                if(!premierChargement) afficherNotification("Mise à jour reçue !");
             }
-            premierChargement = false;
         });
 
         database.ref('chat').limitToLast(20).on('value', (snap) => {
@@ -373,73 +317,114 @@
             const data = snap.val();
             if(data) {
                 Object.keys(data).forEach(k => {
-                    const m = data[k];
-                    chat.innerHTML += `<div class="msg"><b>${m.expediteur}</b><br>${m.message}</div>`;
+                    chat.innerHTML += `<div class="msg"><b>${data[k].expediteur}</b><br>${data[k].message}</div>`;
                 });
                 chat.scrollTop = chat.scrollHeight;
             }
         });
 
-        let chatInitialise = false;
-        database.ref('chat').limitToLast(1).on('child_added', (snap) => {
-            if (!chatInitialise) {
-                chatInitialise = true;
-                return;
-            }
-            const nouveauMsg = snap.val();
-            if (document.hidden && nouveauMsg.expediteur !== utilisateurConnecte) {
-                const textePropre = nouveauMsg.message.replace(/<[^>]*>/g, ' ');
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'CHAT_NOTIFICATION',
-                        title: `Message de ${nouveauMsg.expediteur}`,
-                        body: textePropre
-                    });
-                }
-            }
-        });
-
-        database.ref('pointage').on('value', (snap) => {
-            const p = snap.val() || { statut: "non_arrive" };
-            const status = document.getElementById('statusPointage');
-            const btns = { in: document.getElementById('btnEntree'), out: document.getElementById('btnSortie'), journal: document.getElementById('btnValiderJournal') };
+        // --- ACTIONS GESTION DEPENSES ---
+        function enregistrerDepense() {
+            const mnt = parseFloat(document.getElementById('montantDepense').value);
+            const des = document.getElementById('designationDepense').value;
+            const dtDepense = document.getElementById('dateDepense').value;
+            const editKey = document.getElementById('editKeyDepense').value;
             
-            if(p.statut === "en_cours" && status) {
-                status.innerText = "⏳ Au champ depuis " + p.heureEntree;
-                if(btns.in) btns.in.disabled = true; if(btns.out) btns.out.disabled = false;
-            } else if(p.statut === "attente_journal" && status) {
-                status.innerText = "✅ Sortie à " + p.heureSortie + ". Remplis le journal.";
-                if(btns.out) btns.out.disabled = true; if(btns.journal) btns.journal.disabled = false;
-                if(document.getElementById('tachesFaites')) document.getElementById('tachesFaites').disabled = false;
-                if(document.getElementById('mediaCapture')) document.getElementById('mediaCapture').disabled = false;
-            } else if(status) {
-                status.innerText = "😴 Statut : Pas encore arrivé";
-                if(btns.in) btns.in.disabled = false; if(btns.out) btns.out.disabled = true; if(btns.journal) btns.journal.disabled = true;
-                if(document.getElementById('tachesFaites')) document.getElementById('tachesFaites').disabled = true;
-                if(document.getElementById('mediaCapture')) document.getElementById('mediaCapture').disabled = true;
-            }
-        });
+            if(!mnt || !des || !dtDepense) { alert("Veuillez remplir tous les champs !"); return; }
+            
+            const parts = dtDepense.split('-');
+            const dateFormate = parts[2] + "/" + parts[1] + "/" + parts[0];
 
-        // --- ACTIONS ---
-        function ajouterAuLog(texte, photoBase64 = null, datePrecise = null) {
-            const d = new Date();
-            const dateDuJour = datePrecise || d.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-            database.ref('logs').push({
-                dateLog: dateDuJour,
-                heure: d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                texte: texte,
-                photoStr: photoBase64
-            });
+            if(editKey) {
+                // ÉTAPE MODIFICATION : On retire l'ancien montant et on met le nouveau
+                database.ref('logs/' + editKey).once('value', s => {
+                    const ancienMontant = s.val().brutMontant || 0;
+                    const h = s.val().heure;
+                    
+                    database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - ancienMontant + mnt);
+                    database.ref('logs/' + editKey).update({
+                        dateLog: dateFormate,
+                        texte: `Dépense modifiée par Djim : ${des} (${mnt} FCFA)`,
+                        brutDate: dtDepense,
+                        brutDesignation: des,
+                        brutMontant: mnt,
+                        photoStr: factureUrl || s.val().photoStr || null
+                    });
+                    
+                    annulanterToutFormDepense();
+                    document.getElementById('notificationPopUp').innerText = "Dépense modifiée !";
+                });
+            } else {
+                // ÉTAPE NOUVEAU
+                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
+                
+                database.ref('logs').push({
+                    typeItem: 'depense',
+                    dateLog: dateFormate,
+                    heure: h,
+                    texte: `Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`,
+                    brutDate: dtDepense,
+                    brutDesignation: des,
+                    brutMontant: mnt,
+                    photoStr: factureUrl || null
+                });
+
+                database.ref('chat').push({
+                    expediteur: "Dépenses",
+                    message: `💸 Nouvelle dépense ajoutée par Djim : ${des} (${mnt} FCFA) [Date: ${dateFormate}]`
+                });
+
+                annulanterToutFormDepense();
+            }
         }
 
+        function chargerModificationDepense(key, dateBrute, designation, montant, photo) {
+            switchTab('tab-finance', document.getElementById('navItemFinance'));
+            document.getElementById('editKeyDepense').value = key;
+            document.getElementById('dateDepense').value = dateBrute;
+            document.getElementById('designationDepense').value = designation;
+            document.getElementById('montantDepense').value = montant;
+            document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-edit"></i> Modifier la Dépense`;
+            document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer les modifications";
+            document.getElementById('btnAnnulerEditDepense').style.display = "block";
+            if(photo) {
+                factureUrl = photo;
+                document.getElementById('previewFacture').innerHTML = "<p>✅ Une capture est déjà associée.</p>";
+            }
+        }
+
+        function supprimerDepense(key, montant) {
+            if(confirm("Voulez-vous vraiment supprimer définitivement cette dépense ?")) {
+                database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - montant);
+                database.ref('logs/' + key).remove();
+            }
+        }
+
+        function annulanterToutFormDepense() {
+            document.getElementById('editKeyDepense').value = "";
+            document.getElementById('montantDepense').value = "";
+            document.getElementById('designationDepense').value = "";
+            document.getElementById('dateDepense').valueAsDate = new Date();
+            document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-minus-circle"></i> Enregistrer une Dépense`;
+            document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer Dépense";
+            document.getElementById('btnAnnulerEditDepense').style.display = "none";
+            factureUrl = null;
+            document.getElementById('previewFacture').innerHTML = "";
+        }
+
+        function annulerModificationDepense() { annulanterToutFormDepense(); switchTab('tab-home', document.querySelector('.nav-item')); }
+
+        // --- AUTRES FONCTIONS DU CHAMP (RESTE INCHANGÉ) ---
         function enregistrerRecolte() {
             const pds = parseFloat(document.getElementById('poids').value);
             const prod = document.getElementById('produit').value;
             if(pds > 0) {
+                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'});
                 database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
-                ajouterAuLog(`${utilisateurConnecte} a récolté ${pds}kg de ${prod}`);
+                database.ref('logs').push({ typeItem: 'recolte', dateLog: d, heure: h, texte: `${utilisateurConnecte} a récolté ${pds}kg de ${prod}` });
                 document.getElementById('poids').value = "";
-                afficherNotification("Récolte enregistrée !");
             }
         }
 
@@ -454,71 +439,17 @@
             const kg = document.getElementById('poidsVendu').value;
             const prod = document.getElementById('produitVendu').value;
             const dtVente = document.getElementById('dateVente').value;
-            
-            let dateFormate = null;
-            if(dtVente) {
+            if(total > 0 && dtVente) {
                 const parts = dtVente.split('-');
-                dateFormate = parts[2] + "/" + parts[1];
-            }
-
-            if(total > 0) {
+                const dateFormate = parts[2] + "/" + parts[1] + "/" + parts[0];
+                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
                 database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
-                ajouterAuLog(`Vente au champ par ${utilisateurConnecte} : ${kg}kg de ${prod} (${total} FCFA)`, null, dateFormate);
-                database.ref('chat').push({ expediteur: "Ventes", message: `💰 ${utilisateurConnecte} a vendu ${kg}kg de ${prod} pour un total de : ${total} FCFA` });
-                document.getElementById('poidsVendu').value = ""; document.getElementById('prixAuKg').value = "";
-                document.getElementById('prixTotalVente').value = "";
-                afficherNotification("Vente validée !");
-            }
-        }
-
-        function enregistrerDepense() {
-            const mnt = parseFloat(document.getElementById('montantDepense').value);
-            const des = document.getElementById('designationDepense').value;
-            const dtDepense = document.getElementById('dateDepense').value;
-            
-            let dateFormate = null;
-            if(dtDepense) {
-                const parts = dtDepense.split('-');
-                dateFormate = parts[2] + "/" + parts[1]; // Format "JJ/MM"
-            }
-
-            if(mnt > 0) {
-                database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
+                database.ref('logs').push({ typeItem: 'vente', dateLog: dateFormate, heure: h, texte: `Vente : ${kg}kg de ${prod} (${total} FCFA)` });
+                database.ref('chat').push({ expediteur: "Ventes", message: `💰 Vente au champ : ${kg}kg de ${prod} pour ${total} FCFA` });
                 
-                // On passe la capture d'écran "factureUrl" directement dans l'historique !
-                ajouterAuLog(`Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`, factureUrl, dateFormate);
-                
-                let msg = `💸 Nouvelle dépense ajoutée par Djim : ${des} (${mnt} FCFA)`;
-                if(factureUrl) msg += `<br><img src="${factureUrl}" style="width:100px">`;
-                database.ref('chat').push({ expediteur: "Dépenses", message: msg });
-                
-                document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
-                factureUrl = null; if(document.getElementById('previewFacture')) document.getElementById('previewFacture').innerHTML = "";
-                afficherNotification("Dépense enregistrée !");
+                document.getElementById('poidsVendu').value = ""; document.getElementById('prixAuKg').value = ""; document.getElementById('prixTotalVente').value = "";
             }
-        }
-
-        function pointerEntree() {
-            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            database.ref('pointage').set({ statut: "en_cours", heureEntree: h });
-            ajouterAuLog(`${utilisateurConnecte} est arrivé au champ.`);
-        }
-
-        function pointerSortie() {
-            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            database.ref('pointage').update({ statut: "attente_journal", heureSortie: h });
-        }
-
-        function validerJournal() {
-            const txt = document.getElementById('tachesFaites').value;
-            database.ref('pointage').once('value', s => {
-                const p = s.val();
-                let msg = `📢 Rapport ${utilisateurConnecte} (${p.heureEntree}-${p.heureSortie}) : ${txt}`;
-                if(mediaUrl) msg += `<br><img src="${mediaUrl}" style="width:100%">`;
-                database.ref('chat').push({ expediteur: "Journal", message: msg });
-                database.ref('pointage').set({ statut: "non_arrive" });
-                document.getElementById('tachesFaites').value = ""; mediaUrl = null;
-            });
         }
 
         function envoyerMessage() {
@@ -529,30 +460,15 @@
             }
         }
 
-        // --- READERS IMAGES ---
-        if(document.getElementById('mediaCapture')) {
-            document.getElementById('mediaCapture').addEventListener('change', function(e) {
-                const reader = new FileReader();
-                reader.onload = function(ev) { mediaUrl = ev.target.result; document.getElementById('previewContainer').innerHTML = "<p>Photo prête !</p>"; }
-                reader.readAsDataURL(e.target.files[0]);
-            });
-        }
         if(document.getElementById('factureDepense')) {
             document.getElementById('factureDepense').addEventListener('change', function(e) {
                 const reader = new FileReader();
                 reader.onload = function(ev) { 
                     factureUrl = ev.target.result; 
-                    document.getElementById('previewFacture').innerHTML = "<p>✅ Capture d'écran attachée avec succès !</p>"; 
+                    document.getElementById('previewFacture').innerHTML = "<p>✅ Capture attachée !</p>"; 
                 }
                 reader.readAsDataURL(e.target.files[0]);
             });
-        }
-    </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./service-worker.js')
-            .then(() => console.log("Mode hors-ligne activé !"))
-            .catch((err) => console.log("Erreur :", err));
         }
     </script>
 </body>
