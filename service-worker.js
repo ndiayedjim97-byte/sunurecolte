@@ -3,7 +3,7 @@ const ASSETS = [
   './',
   './index.html',
   './style.css',
-  https://console.firebase.google.com/u/0/project/darou-salam-agritech/database/darou-salam-agritech-default-rtdb/data/~2F
+ 'https://console.firebase.google.com/u/0/project/darou-salam-agritech/database/darou-salam-agritech-default-rtdb/data/~2F'
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
   'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js'
