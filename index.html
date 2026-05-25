@@ -88,7 +88,7 @@
                 <option value="">-- Qui êtes-vous ? --</option>
                 <option value="Djim">Djim (Italie - Admin)</option>
                 <option value="Moustapha">Moustapha (Dakar)</option>
-                <option value="Ndiobo">Ndiobo (Technicien)</option>
+                <option value="Ndiobo">Ndiobo (Nioro)</option>
             </select>
 
             <div id="codeSection" style="display:none;">
@@ -230,6 +230,18 @@
         </section>
 
         <section id="tab-technicien" class="tab-content ndiobo-only">
+            <div class="card finance-card" style="border-top: 4px solid #e65100;">
+                <h2><i class="fas fa-shopping-basket" style="color: #e65100;"></i> Enregistrer une Vente à Nioro (Ndiobo)</h2>
+                <input type="date" id="dateVenteNioro">
+                <select id="produitVenduNioro"></select>
+                <div class="input-group">
+                    <input type="number" id="poidsVenduNioro" placeholder="KG" oninput="calculerTotalVenteNioro()">
+                    <input type="number" id="prixAuKgNioro" placeholder="Prix/KG (FCFA)" oninput="calculerTotalVenteNioro()">
+                </div>
+                <input type="number" id="prixTotalVenteNioro" placeholder="Total FCFA" disabled class="total-input" style="font-weight:bold; color:#2e7d32;">
+                <button onclick="enregistrerVenteNioro()" class="btn-primary" style="background-color: #e65100;">Valider la Vente à Nioro</button>
+            </div>
+
             <div class="card" style="border-top: 4px solid #2e7d32; background: #f1f8e9;">
                 <h2><i class="fas fa-plus-circle" style="color:#2e7d32;"></i> Ajouter une espèce cultivée</h2>
                 <input type="text" id="nomNouvelleEspece" placeholder="Nom de la culture (ex: Oignon, Tomate)">
@@ -327,7 +339,7 @@
         <div class="nav-item active" onclick="switchTab('tab-home', this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
         <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)"><i class="fas fa-tractor"></i><span>Terrain</span></div>
         <div class="nav-item nav-moustapha" id="navItemDakar" onclick="switchTab('tab-dakar', this)"><i class="fas fa-store"></i><span>Dakar</span></div>
-        <div class="nav-item nav-ndiobo" id="navItemTechnicien" onclick="switchTab('tab-technicien', this)"><i class="fas fa-calendar-alt"></i><span>Planning</span></div>
+        <div class="nav-item nav-ndiobo" id="navItemTechnicien" onclick="switchTab('tab-technicien', this)"><i class="fas fa-calendar-alt"></i><span>Planning / Nioro</span></div>
         <div class="nav-item nav-admin" id="navItemFinance" onclick="switchTab('tab-finance', this)"><i class="fas fa-coins"></i><span>Gestion</span></div>
         <div class="nav-item" onclick="switchTab('tab-chat', this)"><i class="fas fa-comments"></i><span>Chat</span></div>
     </nav>
@@ -444,6 +456,7 @@
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
             document.getElementById('dateDepense').valueAsDate = now;
             if(document.getElementById('dateVenteDakar')) document.getElementById('dateVenteDakar').valueAsDate = now;
+            if(document.getElementById('dateVenteNioro')) document.getElementById('dateVenteNioro').valueAsDate = now;
             if(document.getElementById('datePlanning')) document.getElementById('datePlanning').valueAsDate = now;
 
             const nomSauvegarde = localStorage.getItem('userNomDarou');
@@ -559,7 +572,8 @@
             const listes = [
                 document.getElementById('produit'),
                 document.getElementById('produitExpedie'),
-                document.getElementById('produitVenduDakar')
+                document.getElementById('produitVenduDakar'),
+                document.getElementById('produitVenduNioro') // Ajouté pour Ndiobo
             ];
             listes.forEach(l => { if(l) l.innerHTML = ""; });
 
@@ -660,7 +674,6 @@
             const parts = dateV.split('-');
             const dateFormatee = parts[2] + '/' + parts[1];
 
-            // 1. Mise à jour du dashboard global sur Firebase
             database.ref('dashboard').once('value', (snap) => {
                 const d = snap.val() || { totalArgent: 0 };
                 database.ref('dashboard').update({
@@ -668,17 +681,15 @@
                 });
             });
 
-            // 2. Écriture du log de vente avec les détails d'espèce
             database.ref('logs').push({
                 typeItem: 'vente',
                 dateLog: dateFormatee,
                 heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                texte: `💰 Moustapha a vendu ${kg} KG de ${prod} pour un total de ${total.toLocaleString()} FCFA (${px} FCFA/KG).`,
+                texte: `💰 Moustapha a vendu ${kg} KG de ${prod} pour un total de ${total.toLocaleString()} FCFA (${px} FCFA/KG) à Dakar.`,
                 espece: prod,
                 brutMontant: total
             });
 
-            // 3. Notification d'équipe dans le chat
             database.ref('chat').push({
                 expediteur: "💰 VENTE DAKAR",
                 message: `Moustapha a validé une vente de **${prod}** : **${kg} KG** pour **${total.toLocaleString()} FCFA**.`
@@ -688,6 +699,55 @@
             document.getElementById('prixAuKgDakar').value = "";
             document.getElementById('prixTotalVenteDakar').value = "";
             triggerPopupNotification("Vente enregistrée et caisses automatiquement recalculées !");
+        }
+
+        // --- ENREGISTRER UNE VENTE POUR NDIOBO (NIORO) ---
+        function calculerTotalVenteNioro() {
+            const kg = parseFloat(document.getElementById('poidsVenduNioro').value) || 0;
+            const px = parseFloat(document.getElementById('prixAuKgNioro').value) || 0;
+            document.getElementById('prixTotalVenteNioro').value = kg * px;
+        }
+
+        function enregistrerVenteNioro() {
+            const dateV = document.getElementById('dateVenteNioro').value;
+            const prod = document.getElementById('produitVenduNioro').value;
+            const kg = parseFloat(document.getElementById('poidsVenduNioro').value);
+            const px = parseFloat(document.getElementById('prixAuKgNioro').value);
+            const total = kg * px;
+
+            if(!dateV || !kg || !px) { alert("Veuillez remplir correctement tous les champs de vente."); return; }
+
+            const parts = dateV.split('-');
+            const dateFormatee = parts[2] + '/' + parts[1];
+
+            // 1. Mise à jour des revenus globaux
+            database.ref('dashboard').once('value', (snap) => {
+                const d = snap.val() || { totalArgent: 0 };
+                database.ref('dashboard').update({
+                    totalArgent: (d.totalArgent || 0) + total
+                });
+            });
+
+            // 2. Ajout dans l'historique général (Logs)
+            database.ref('logs').push({
+                typeItem: 'vente',
+                dateLog: dateFormatee,
+                heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                texte: `🍊 Ndiobo a vendu ${kg} KG de ${prod} pour un total de ${total.toLocaleString()} FCFA (${px} FCFA/KG) à Nioro.`,
+                espece: prod,
+                brutMontant: total
+            });
+
+            // 3. Notification d'équipe (Chat)
+            database.ref('chat').push({
+                expediteur: "🍊 VENTE NIORO",
+                message: `Ndiobo a validé une vente de **${prod}** à Nioro : **${kg} KG** pour **${total.toLocaleString()} FCFA**.`
+            });
+
+            document.getElementById('poidsVenduNioro').value = "";
+            document.getElementById('prixAuKgNioro').value = "";
+            document.getElementById('prixTotalVenteNioro').value = "";
+            triggerPopupNotification("Vente à Nioro enregistrée avec succès !");
         }
 
         // --- AUTRES LOGIQUES APPLICATIVES EXISTANTES ---
@@ -830,7 +890,6 @@
             const p = dt.split('-'); const dateFormatee = p[2] + '/' + p[1];
 
             if(editKey) {
-                // Modification
                 database.ref('logs/' + editKey).once('value', (snap) => {
                     const ancienLog = snap.val();
                     const ancMt = ancienLog.brutMontant || 0;
@@ -846,7 +905,6 @@
                     }).then(() => { annulerModificationDepense(); });
                 });
             } else {
-                // Nouvelle dépense
                 database.ref('dashboard').once('value', (snap) => {
                     const d = snap.val() || {};
                     database.ref('dashboard').update({ totalDepenses: (d.totalDepenses || 0) + mt });
