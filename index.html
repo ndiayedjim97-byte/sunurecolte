@@ -51,7 +51,6 @@
         .calendar-item { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
         .calendar-item.done { border-left-color: #777; background: #eee; text-decoration: line-through; opacity: 0.7; }
         
-        /* Styles spécifiques aux expéditions logistiques */
         .expedition-card { background: #e3f2fd; border-left: 4px solid #1e88e5; padding: 12px; margin-bottom: 10px; border-radius: 8px; }
         .expedition-card.recu { background: #e8f5e9; border-left-color: #2e7d32; }
         .expedition-card h4 { margin: 0 0 5px 0; color: #1565c0; font-size: 1rem; }
@@ -62,6 +61,19 @@
         .status-ok { background: #2e7d32; }
 
         .notif-popup { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 30px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; font-size: 0.9rem; font-weight: bold; text-align: center; }
+
+        /* NOUVEAUX STYLES REPARTITION FINANCIERE */
+        .finance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 15px 0; }
+        .finance-card-box { background: #ffffff; padding: 12px; border-radius: 10px; border-top: 4px solid #4ca1af; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; }
+        .finance-card-box.commu { border-top-color: #ffa000; background: #fffbf2; }
+        .finance-card-box.perso { border-top-color: #2e7d32; background: #f4fbf4; }
+        .finance-card-box h4 { margin: 0; font-size: 0.85rem; color: #666; text-transform: uppercase; }
+        .finance-card-box p { margin: 8px 0 0 0; font-size: 1.2rem; font-weight: bold; color: #333; }
+        .espece-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        .espece-item:last-child { border-bottom: none; }
+        .config-input-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #f9f9f9; padding: 8px; border-radius: 6px; }
+        .config-input-group label { font-weight: bold; font-size: 0.9rem; color: #444; }
+        .config-input-group input { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -90,7 +102,7 @@
     <div id="alertPopup" class="notif-popup"></div>
 
     <header class="main-header">
-        <div class="logo"><i class="fas fa-leaf"></i> <span>Darou Salam Agri-Tech</span></div>
+        <div class="logo"><i class="fas fa-leaf"></i> <span>Dertady Agro Tech</span></div>
         <div style="text-align: right;">
             <span id="userNameBadge" style="background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 20px; font-size: 0.8rem; display: block; font-weight: bold; margin-bottom: 2px;">--</span>
             <p id="currentDate" style="margin:0; font-size: 0.8rem;">-- / -- / ----</p>
@@ -103,11 +115,40 @@
                 <div class="stat-card">
                     <i class="fas fa-box-open"></i> <p>Récolte Totale</p> <h3 id="totalKilos">0</h3> <span>KG</span>
                 </div>
-                <div class="stat-card income admin-only">
-                    <i class="fas fa-wallet"></i> <p>Revenus</p> <h3 id="totalArgent">0</h3> <span>FCFA</span>
+                <div class="stat-card income">
+                    <i class="fas fa-wallet"></i> <p>Revenus Globaux</p> <h3 id="totalArgent">0</h3> <span>FCFA</span>
                 </div>
                 <div class="stat-card expense admin-only">
                     <i class="fas fa-file-invoice-dollar"></i> <p>Dépenses</p> <h3 id="totalDepenses">0</h3> <span>FCFA</span>
+                </div>
+            </div>
+
+            <div class="card" style="border-top: 4px solid #2e7d32;">
+                <h2><i class="fas fa-coins" style="color:#2e7d32;"></i> Répartition Financière Globale</h2>
+                
+                <h3 style="font-size:1rem; color:#555; margin-bottom:5px;"><i class="fas fa-chart-line"></i> Ventes par Espèces</h3>
+                <div id="listeEspecesFinances" style="background: #fff; padding: 10px; border-radius: 8px; margin-bottom: 15px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                    Chargement des données par espèce...
+                </div>
+
+                <h3 style="font-size:1rem; color:#555; margin-bottom:5px;"><i class="fas fa-vault"></i> Caisses Communautaires</h3>
+                <div class="finance-grid">
+                    <div class="finance-card-box commu">
+                        <h4>Épargne</h4>
+                        <p id="caisseEpargne">0 FCFA</p>
+                    </div>
+                    <div class="finance-card-box commu">
+                        <h4>Investissement</h4>
+                        <p id="caisseInvestissement">0 FCFA</p>
+                    </div>
+                </div>
+
+                <h3 style="font-size:1rem; color:#555; margin-bottom:5px;"><i class="fas fa-user-shield"></i> Mon Espace Argent Disponible</h3>
+                <div class="finance-grid" style="grid-template-columns: 1fr;">
+                    <div class="finance-card-box perso">
+                        <h4 style="color:#2e7d32;">Mon Solde Personnel Après Partage</h4>
+                        <p id="caissePersonnelle" style="font-size: 1.6rem; color:#2e7d32;">0 FCFA</p>
+                    </div>
                 </div>
             </div>
 
@@ -210,6 +251,37 @@
         </section>
 
         <section id="tab-finance" class="tab-content admin-only">
+            <div class="card" style="border-top: 4px solid #2e7d32; background: #f9fbf9;">
+                <h2><i class="fas fa-sliders-h" style="color:#2e7d32;"></i> Configuration des Pourcentages de Partage</h2>
+                <p style="font-size:0.85rem; color:#666; margin-bottom:12px;">Définis ici les taux. Les caisses communautaires sont calculées en premier, puis le RESTE est distribué individuellement.</p>
+                
+                <h3 style="font-size:0.9rem; color:#ffa000; margin:5px 0;">🏢 Caisses Communautaires :</h3>
+                <div class="config-input-group">
+                    <label>Épargne (%) :</label>
+                    <input type="number" id="pctEpargne" value="10">
+                </div>
+                <div class="config-input-group">
+                    <label>Investissement (%) :</label>
+                    <input type="number" id="pctInvestissement" value="20">
+                </div>
+
+                <h3 style="font-size:0.9rem; color:#2e7d32; margin:5px 0;">👤 Parts Individuelles (sur le reste) :</h3>
+                <div class="config-input-group">
+                    <label>Part de Djim (%) :</label>
+                    <input type="number" id="pctDjim" value="40">
+                </div>
+                <div class="config-input-group">
+                    <label>Part de Moustapha (%) :</label>
+                    <input type="number" id="pctMoustapha" value="30">
+                </div>
+                <div class="config-input-group">
+                    <label>Part de Ndiobo (%) :</label>
+                    <input type="number" id="pctNdiobo" value="30">
+                </div>
+                
+                <button onclick="sauvegarderPourcentages()" class="btn-primary" style="background:#2e7d32; width:100%;">Enregistrer les Pourcentages</button>
+            </div>
+
             <div class="card finance-card expense">
                 <h2 id="titleFormDepense"><i class="fas fa-minus-circle"></i> Enregistrer une Dépense Générale</h2>
                 <input type="hidden" id="editKeyDepense" value="">
@@ -277,6 +349,7 @@
         let utilisateurConnecte = null;
         let codeExisteSurFirebase = false;
         let mediaUrl = null, factureUrl = null, premierChargement = true;
+        let configurationsPartage = { epargne: 10, investissement: 20, Djim: 40, Moustapha: 30, Ndiobo: 30 };
 
         function msgLogin(txt, couleur) {
             const m = document.getElementById('loginMessage');
@@ -339,7 +412,6 @@
             document.getElementById('userNameBadge').innerText = nom;
             document.getElementById('nomExpediteurBloque').innerText = nom;
             
-            // Masquage par défaut de tous les accès conditionnels
             document.querySelectorAll('.admin-only, .field-only, .ndiobo-only, .moustapha-only').forEach(el => el.style.display = 'none');
             document.getElementById('navItemFinance').style.display = 'none';
             document.getElementById('navItemField').style.display = 'none';
@@ -357,6 +429,7 @@
                 document.querySelectorAll('.moustapha-only').forEach(el => el.style.display = 'block');
                 document.getElementById('navItemDakar').style.display = 'flex';
             }
+            calculerEtAfficherFinances();
         }
 
         function switchTab(tabId, el) {
@@ -379,12 +452,99 @@
             else document.getElementById('loginScreen').style.display = 'flex';
         };
 
+        // --- GESTION DES CONFIGURATIONS DE REPARTITION (DJIM) ---
+        database.ref('config_partage').on('value', (snap) => {
+            const val = snap.val();
+            if(val) {
+                configurationsPartage = val;
+                if(document.getElementById('pctEpargne')) {
+                    document.getElementById('pctEpargne').value = val.epargne;
+                    document.getElementById('pctInvestissement').value = val.investissement;
+                    document.getElementById('pctDjim').value = val.Djim;
+                    document.getElementById('pctMoustapha').value = val.Moustapha;
+                    document.getElementById('pctNdiobo').value = val.Ndiobo;
+                }
+                calculerEtAfficherFinances();
+            }
+        });
+
+        function sauvegarderPourcentages() {
+            const ep = parseInt(document.getElementById('pctEpargne').value) || 0;
+            const inv = parseInt(document.getElementById('pctInvestissement').value) || 0;
+            const dj = parseInt(document.getElementById('pctDjim').value) || 0;
+            const ms = parseInt(document.getElementById('pctMoustapha').value) || 0;
+            const nd = parseInt(document.getElementById('pctNdiobo').value) || 0;
+
+            if((dj + ms + nd) !== 100) {
+                alert("Attention ! Le total des parts individuelles (Djim + Moustapha + Ndiobo) doit obligatoirement être égal à 100% du reste !");
+                return;
+            }
+
+            database.ref('config_partage').set({ epargne: ep, investissement: inv, Djim: dj, Moustapha: ms, Ndiobo: nd })
+            .then(() => { triggerPopupNotification("Pourcentages mis à jour avec succès !"); });
+        }
+
+        // --- CALCULS ET TRAITEMENTS FINANCIERS DYNAMIQUES ---
+        function calculerEtAfficherFinances() {
+            database.ref('logs').once('value', (snap) => {
+                const logs = snap.val() || {};
+                let totalRevenus = 0;
+                let especesVentes = {};
+
+                Object.keys(logs).forEach(k => {
+                    const l = logs[k];
+                    if(l.typeItem === 'vente') {
+                        const mt = parseFloat(l.brutMontant) || 0;
+                        totalRevenus += mt;
+                        if(l.espece) {
+                            especesVentes[l.espece] = (especesVentes[l.espece] || 0) + mt;
+                        }
+                    }
+                });
+
+                // 1. Afficher les ventes par espèces cultivées
+                const containerEspeces = document.getElementById('listeEspecesFinances');
+                if(containerEspeces) {
+                    if(Object.keys(especesVentes).length === 0) {
+                        containerEspeces.innerHTML = "<p style='color:#777; font-style:italic; margin:0;'>Aucune vente par espèce enregistrée.</p>";
+                    } else {
+                        containerEspeces.innerHTML = "";
+                        Object.keys(especesVentes).forEach(esp => {
+                            containerEspeces.innerHTML += `
+                                <div class="espece-item">
+                                    <span>🌾 <b>${esp}</b></span>
+                                    <span style="color:#2e7d32; font-weight:bold;">${especesVentes[esp].toLocaleString()} FCFA</span>
+                                </div>`;
+                        });
+                    }
+                }
+
+                // 2. Calcul des Caisses Communautaires et Individuelles
+                let epargneTotal = (totalRevenus * configurationsPartage.epargne) / 100;
+                let investissementTotal = (totalRevenus * configurationsPartage.investissement) / 100;
+                let resteAPartager = totalRevenus - (epargneTotal + investissementTotal);
+
+                let partIndividuelle = 0;
+                if(utilisateurConnecte && configurationsPartage[utilisateurConnecte]) {
+                    partIndividuelle = (resteAPartager * configurationsPartage[utilisateurConnecte]) / 100;
+                }
+
+                // Affichage sur les bonnes cases de l'écran
+                if(document.getElementById('caisseEpargne')) document.getElementById('caisseEpargne').innerText = epargneTotal.toLocaleString() + " FCFA";
+                if(document.getElementById('caisseInvestissement')) document.getElementById('caisseInvestissement').innerText = investissementTotal.toLocaleString() + " FCFA";
+                if(document.getElementById('caissePersonnelle')) {
+                    document.getElementById('caissePersonnelle').innerText = partIndividuelle.toLocaleString() + " FCFA";
+                }
+            });
+        }
+
         // --- ECOUTEURS FIREBASE DYNAMIQUES ---
         database.ref('dashboard').on('value', (snap) => {
             const d = snap.val() || {};
             document.getElementById('totalKilos').innerText = d.totalKilos || 0;
             document.getElementById('totalArgent').innerText = (d.totalArgent || 0).toLocaleString();
             document.getElementById('totalDepenses').innerText = (d.totalDepenses || 0).toLocaleString();
+            calculerEtAfficherFinances();
         });
 
         database.ref('stocks').on('value', (snap) => {
@@ -412,7 +572,6 @@
             });
         });
 
-        // Lecture des expéditions en route ou reçues à Dakar
         database.ref('expeditions').limitToLast(15).on('value', (snap) => {
             const container = document.getElementById('listeExpeditionsDakar');
             if(!container) return;
@@ -474,6 +633,7 @@
                     hist.innerHTML += `<div class="log-item"><b>[${item.dateLog || '---'}] ${item.heure || ''}</b> : ${item.texte}${logImg}${actionsHtml}</div>`;
                 });
             }
+            calculerEtAfficherFinances();
         });
 
         database.ref('chat').limitToLast(20).on('value', (snap) => {
@@ -481,7 +641,78 @@
             if(data) { Object.keys(data).forEach(k => { chat.innerHTML += `<div class="msg"><b>${data[k].expediteur}</b><br>${data[k].message}</div>`; }); chat.scrollTop = chat.scrollHeight; }
         });
 
-        // --- FONCTIONS LOGISTIQUES ET EXPEDITIONS (Ndiobo ➔ Moustapha) ---
+        // --- ENREGISTRER UNE VENTE (MOUSTAPHA) AVEC IMPACT FINANCIER DYNAMIQUE ---
+        function calculerTotalVenteDakar() {
+            const kg = parseFloat(document.getElementById('poidsVenduDakar').value) || 0;
+            const px = parseFloat(document.getElementById('prixAuKgDakar').value) || 0;
+            document.getElementById('prixTotalVenteDakar').value = kg * px;
+        }
+
+        function enregistrerVenteDakar() {
+            const dateV = document.getElementById('dateVenteDakar').value;
+            const prod = document.getElementById('produitVenduDakar').value;
+            const kg = parseFloat(document.getElementById('poidsVenduDakar').value);
+            const px = parseFloat(document.getElementById('prixAuKgDakar').value);
+            const total = kg * px;
+
+            if(!dateV || !kg || !px) { alert("Veuillez remplir correctement tous les champs de vente."); return; }
+
+            const parts = dateV.split('-');
+            const dateFormatee = parts[2] + '/' + parts[1];
+
+            // 1. Mise à jour du dashboard global sur Firebase
+            database.ref('dashboard').once('value', (snap) => {
+                const d = snap.val() || { totalArgent: 0 };
+                database.ref('dashboard').update({
+                    totalArgent: (d.totalArgent || 0) + total
+                });
+            });
+
+            // 2. Écriture du log de vente avec les détails d'espèce
+            database.ref('logs').push({
+                typeItem: 'vente',
+                dateLog: dateFormatee,
+                heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                texte: `💰 Moustapha a vendu ${kg} KG de ${prod} pour un total de ${total.toLocaleString()} FCFA (${px} FCFA/KG).`,
+                espece: prod,
+                brutMontant: total
+            });
+
+            // 3. Notification d'équipe dans le chat
+            database.ref('chat').push({
+                expediteur: "💰 VENTE DAKAR",
+                message: `Moustapha a validé une vente de **${prod}** : **${kg} KG** pour **${total.toLocaleString()} FCFA**.`
+            });
+
+            document.getElementById('poidsVenduDakar').value = "";
+            document.getElementById('prixAuKgDakar').value = "";
+            document.getElementById('prixTotalVenteDakar').value = "";
+            triggerPopupNotification("Vente enregistrée et caisses automatiquement recalculées !");
+        }
+
+        // --- AUTRES LOGIQUES APPLICATIVES EXISTANTES ---
+        function enregistrerRecolte() {
+            const prod = document.getElementById('produit').value;
+            const pds = parseFloat(document.getElementById('poids').value);
+            if(!pds) { alert("Poids requis !"); return; }
+            const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+
+            database.ref('dashboard').once('value', (snap) => {
+                const db = snap.val() || {};
+                database.ref('dashboard').update({ totalKilos: (db.totalKilos || 0) + pds });
+            });
+
+            database.ref('logs').push({
+                typeItem: 'recolte',
+                dateLog: d,
+                heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                texte: `🌾 Récolte enregistrée par Ndiobo : +${pds} KG de ${prod}.`
+            });
+
+            document.getElementById('poids').value = "";
+            triggerPopupNotification("Récolte ajoutée !");
+        }
+
         function creerExpeditionDakar() {
             const prod = document.getElementById('produitExpedie').value;
             const pds = parseFloat(document.getElementById('poidsExpedie').value);
@@ -525,165 +756,188 @@
                     typeItem: 'reception',
                     dateLog: d,
                     heure: h,
-                    texte: `Moustapha a réceptionné la marchandise à Dakar : ${pdsRecu} KG de ${ex.produit} (Envoyé: ${ex.poidsEnvoye} KG)`
+                    texte: `Moustapha a réceptionné la marchandise à Dakar : ${pdsRecu} KG de ${ex.produit} (Chauffeur: ${ex.chauffeur}).`
                 });
-
-                database.ref('chat').push({
-                    expediteur: "📦 RÉCEPTION",
-                    message: `✅ Moustapha a reçu la cargaison de **${ex.produit}** à Dakar. Reçu: **${pdsRecu} KG** (Poids départ: ${ex.poidsEnvoye} KG).`
-                });
+                triggerPopupNotification("Réception validée !");
             });
         }
 
-        // --- COMMERCE & LOGISTIQUE MOUSTAPHA (Dakar) ---
-        function calculerTotalVenteDakar() {
-            const kg = parseFloat(document.getElementById('poidsVenduDakar').value) || 0;
-            const prx = parseFloat(document.getElementById('prixAuKgDakar').value) || 0;
-            document.getElementById('prixTotalVenteDakar').value = kg * prx;
-        }
-
-        function enregistrerVenteDakar() {
-            const total = parseFloat(document.getElementById('prixTotalVenteDakar').value);
-            const kg = document.getElementById('poidsVenduDakar').value;
-            const prod = document.getElementById('produitVenduDakar').value;
-            const dt = document.getElementById('dateVenteDakar').value;
-
-            if(!total || !dt) { alert("Champs invalides !"); return; }
-            const parts = dt.split('-'); const dateFormate = parts[2] + "/" + parts[1];
-            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-            database.ref('dashboard/totalArgent').transaction(cur => (cur || 0) + total);
-            database.ref('logs').push({ typeItem: 'vente', dateLog: dateFormate, heure: h, texte: `Vente Dakar (Moustapha) : ${kg}kg de ${prod} (${total} FCFA)` });
-            database.ref('chat').push({ expediteur: "💰 VENTES DAKAR", message: `🏪 Moustapha a vendu ${kg}kg de ${prod} à Dakar pour un montant de **${total} FCFA**.` });
-
-            document.getElementById('poidsVenduDakar').value = ""; document.getElementById('prixAuKgDakar').value = ""; document.getElementById('prixTotalVenteDakar').value = "";
-        }
-
-        function enregistrerDepenseDakar() {
-            const des = document.getElementById('desigDepenseDakar').value.trim();
-            const mnt = parseFloat(document.getElementById('montantDepenseDakar').value);
-
-            if(!des || !mnt) { alert("Veuillez remplir le libellé et le montant !"); return; }
-            const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-
-            database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
-            database.ref('logs').push({ typeItem: 'depense', dateLog: d, heure: h, texte: `Dépense Dakar par Moustapha : ${des} (${mnt} FCFA)` });
-            database.ref('chat').push({ expediteur: "💸 LOGISTIQUE", message: `Moustapha a déclaré une dépense logistique à Dakar : *${des}* (${mnt} FCFA).` });
-
-            document.getElementById('desigDepenseDakar').value = ""; document.getElementById('montantDepenseDakar').value = "";
-            triggerPopupNotification("Dépense enregistrée à Dakar !");
-        }
-
-        // --- FONCTIONS CLASSIQUES RECOLTES / CULTURES (Ndiobo) ---
         function ajouterNouvelleEspece() {
             const nom = document.getElementById('nomNouvelleEspece').value.trim();
             if(!nom) return;
-            database.ref('especes_cultivees').push(nom, () => {
-                database.ref('chat').push({ expediteur: "🌱 CULTURES", message: `🚀 Nouvelle culture disponible : **${nom}**.` });
+            database.ref('especes_cultivees').push(nom).then(() => {
                 document.getElementById('nomNouvelleEspece').value = "";
+                triggerPopupNotification("Nouvelle espèce enregistrée !");
             });
         }
 
-        function enregistrerRecolte() {
-            const pds = parseFloat(document.getElementById('poids').value); const prod = document.getElementById('produit').value;
-            if(pds > 0) {
-                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-                database.ref('dashboard/totalKilos').transaction(cur => (cur || 0) + pds);
-                database.ref('logs').push({ typeItem: 'recolte', dateLog: d, heure: h, texte: `${utilisateurConnecte} a récolté ${pds}kg de ${prod} au champ.` });
-                document.getElementById('poids').value = "";
-                triggerPopupNotification("Récolte stockée !");
-            }
+        function ajouterDateCalendrier() {
+            const dt = document.getElementById('datePlanning').value;
+            const typ = document.getElementById('typeEntretien').value;
+            const det = document.getElementById('detailsEntretien').value.trim();
+            if(!dt || !det) { alert("Tous les champs sont requis."); return; }
+
+            const p = dt.split('-'); const formatee = p[2] + '/' + p[1];
+            database.ref('planning').push({ dateFormate: formatee, type: typ, details: det, statut: "en_cours" });
+
+            database.ref('chat').push({
+                expediteur: "📅 PLANNING",
+                message: `🚨 Nouvelle tâche fixée par Ndiobo le **${formatee}** : [${typ}] ${det}.`
+            });
+
+            document.getElementById('detailsEntretien').value = "";
+            triggerPopupNotification("Tâche planifiée !");
+        }
+
+        function marquerTacheTerminee(key) {
+            database.ref('planning/' + key).update({ statut: "termine" }).then(() => {
+                triggerPopupNotification("Tâche marquée comme faite !");
+            });
         }
 
         function declarerUtilisationStock() {
-            const type = document.getElementById('choixStockUtilise').value; const qte = parseFloat(document.getElementById('quantiteUtilisee').value);
-            if(!qte || qte <= 0) return;
-            database.ref('stocks/' + type).transaction(cur => {
-                if((cur || 0) < qte) { alert("Stock insuffisant !"); return cur; } return cur - qte;
-            }, (err, comm) => {
-                if(comm) {
-                    const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
-                    database.ref('logs').push({ typeItem: 'stock', dateLog: d, heure: h, texte: `📦 Stock utilisé au champ : -${qte} ${type}` });
-                    document.getElementById('quantiteUtilisee').value = "";
-                }
+            const typeS = document.getElementById('choixStockUtilise').value;
+            const qte = parseFloat(document.getElementById('quantiteUtilisee').value);
+            if(!qte || qte <= 0) { alert("Quantité incorrecte"); return; }
+
+            database.ref('stocks/' + typeS).once('value', (snap) => {
+                let sActuel = snap.val() || 0;
+                if(sActuel < qte) { alert("Erreur : Pas assez de stock disponible au champ !"); return; }
+                
+                database.ref('stocks/' + typeS).set(sActuel - qte);
+                const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+                
+                database.ref('logs').push({
+                    typeItem: 'stock_use',
+                    dateLog: d,
+                    heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    texte: `📉 Ndiobo a utilisé ${qte} unité(s) de stock : ${typeS}.`
+                });
+                document.getElementById('quantiteUtilisee').value = "";
+                triggerPopupNotification("Utilisation enregistrée !");
             });
         }
 
         function enregistrerDepense() {
-            const mnt = parseFloat(document.getElementById('montantDepense').value);
-            const des = document.getElementById('designationDepense').value;
-            const dtDepense = document.getElementById('dateDepense').value;
+            const dt = document.getElementById('dateDepense').value;
+            const des = document.getElementById('designationDepense').value.trim();
+            const mt = parseFloat(document.getElementById('montantDepense').value);
+            const stkLie = document.getElementById('stockLieALaDepense').value;
+            const qteLie = parseFloat(document.getElementById('quantiteLieeAAlimenter').value) || 0;
             const editKey = document.getElementById('editKeyDepense').value;
-            const stockChoisi = document.getElementById('stockLieALaDepense').value;
-            const qteAlimenter = parseFloat(document.getElementById('quantiteLieeAAlimenter').value) || 0;
-            
-            if(!mnt || !des || !dtDepense) return;
-            const parts = dtDepense.split('-'); const dateFormate = parts[2] + "/" + parts[1];
+
+            if(!dt || !des || !mt) { alert("Veuillez remplir la désignation et le montant."); return; }
+            const p = dt.split('-'); const dateFormatee = p[2] + '/' + p[1];
 
             if(editKey) {
-                database.ref('logs/' + editKey).once('value', s => {
-                    let anc = s.val().brutMontant || 0;
-                    database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - anc + mnt);
-                    database.ref('logs/' + editKey).update({ dateLog: dateFormate, texte: `Dépense par Djim : ${des} (${mnt} FCFA)`, brutDate: dtDepense, brutDesignation: des, brutMontant: mnt, photoStr: factureUrl || s.val().photoStr || null });
-                    annulanterToutFormDepense();
+                // Modification
+                database.ref('logs/' + editKey).once('value', (snap) => {
+                    const ancienLog = snap.val();
+                    const ancMt = ancienLog.brutMontant || 0;
+
+                    database.ref('dashboard').once('value', (snapD) => {
+                        const d = snapD.val() || {};
+                        database.ref('dashboard').update({ totalDepenses: (d.totalDepenses || 0) - ancMt + mt });
+                    });
+
+                    database.ref('logs/' + editKey).update({
+                        dateLog: dateFormatee, texte: `❌ Dépense modifiée par Djim : ${des} (${mt.toLocaleString()} FCFA).`,
+                        brutDate: dt, brutDesignation: des, brutMontant: mt
+                    }).then(() => { annulerModificationDepense(); });
                 });
             } else {
-                const h = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) + mnt);
-                if(stockChoisi && qteAlimenter > 0) database.ref('stocks/' + stockChoisi).transaction(cur => (cur || 0) + qteAlimenter);
+                // Nouvelle dépense
+                database.ref('dashboard').once('value', (snap) => {
+                    const d = snap.val() || {};
+                    database.ref('dashboard').update({ totalDepenses: (d.totalDepenses || 0) + mt });
+                });
 
-                database.ref('logs').push({ typeItem: 'depense', dateLog: dateFormate, heure: h, texte: `Dépense par ${utilisateurConnecte} : ${des} (${mnt} FCFA)`, brutDate: dtDepense, brutDesignation: des, brutMontant: mnt, photoStr: factureUrl || null });
-                database.ref('chat').push({ expediteur: "Dépenses", message: `💸 Nouvelle dépense générale : ${des} (${mnt} FCFA).` });
-                annulanterToutFormDepense();
+                if(stkLie && qteLie > 0) {
+                    database.ref('stocks/' + stkLie).once('value', (snapS) => {
+                        let stockA = snapS.val() || 0;
+                        database.ref('stocks/' + stkLie).set(stockA + qteLie);
+                    });
+                }
+
+                database.ref('logs').push({
+                    typeItem: 'depense', dateLog: dateFormatee,
+                    heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    texte: `🛑 Dépense ajoutée par Djim : ${des} (${mt.toLocaleString()} FCFA).`,
+                    brutDate: dt, brutDesignation: des, brutMontant: mt
+                });
+
+                document.getElementById('designationDepense').value = "";
+                document.getElementById('montantDepense').value = "";
+                document.getElementById('stockLieALaDepense').value = "";
+                document.getElementById('quantiteLieeAAlimenter').value = "";
+                triggerPopupNotification("Dépense enregistrée !");
             }
         }
 
-        function ajouterDateCalendrier() {
-            const dt = document.getElementById('datePlanning').value; const type = document.getElementById('typeEntretien').value; const details = document.getElementById('detailsEntretien').value;
-            if(!dt || !details) return;
-            const parts = dt.split('-'); const dateFormate = parts[2] + "/" + parts[1];
-            database.ref('planning').push({ dateBrute: dt, dateFormate: dateFormate, type: type, details: details, statut: "planifie" });
-            database.ref('chat').push({ expediteur: "⚠️ PLANNING", message: `📅 Calendrier mis à jour : ${type} le ${dateFormate}.` });
-            document.getElementById('detailsEntretien').value = "";
+        function enregistrerDepenseDakar() {
+            const des = document.getElementById('desigDepenseDakar').value.trim();
+            const mt = parseFloat(document.getElementById('montantDepenseDakar').value);
+            if(!des || !mt) { alert("Veuillez remplir tous les champs."); return; }
+
+            const d = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+
+            database.ref('dashboard').once('value', (snap) => {
+                const dataD = snap.val() || {};
+                database.ref('dashboard').update({ totalDepenses: (dataD.totalDepenses || 0) + mt });
+            });
+
+            database.ref('logs').push({
+                typeItem: 'depense',
+                dateLog: d,
+                heure: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                texte: `🛑 Dépense Dakar (Moustapha) : ${des} (${mt.toLocaleString()} FCFA).`,
+                brutMontant: mt
+            });
+
+            database.ref('chat').push({
+                expediteur: "🛑 DÉPENSE DAKAR",
+                message: `Moustapha a déclaré une dépense de **${mt.toLocaleString()} FCFA** pour : *${des}*.`
+            });
+
+            document.getElementById('desigDepenseDakar').value = "";
+            document.getElementById('montantDepenseDakar').value = "";
+            triggerPopupNotification("Dépense Dakar enregistrée !");
         }
 
-        function marquerTacheTerminee(key) {
-            database.ref('planning/' + key).update({ statut: "termine" });
-            database.ref('chat').push({ expediteur: "✓ PLANNING", message: `✅ Tâche terminée par Ndiobo.` });
-        }
-
-        function chargerModificationDepense(key, dateBrute, designation, montant) {
-            switchTab('tab-finance', document.getElementById('navItemFinance'));
-            document.getElementById('editKeyDepense').value = key; document.getElementById('dateDepense').value = dateBrute;
-            document.getElementById('designationDepense').value = designation; document.getElementById('montantDepense').value = montant;
-            document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-edit"></i> Modifier la Dépense`;
+        function chargerModificationDepense(key, dt, des, mt) {
+            document.getElementById('editKeyDepense').value = key;
+            document.getElementById('dateDepense').value = dt;
+            document.getElementById('designationDepense').value = des;
+            document.getElementById('montantDepense').value = mt;
+            document.getElementById('titleFormDepense').innerHTML = "<i class='fas fa-edit'></i> Modifier la Dépense";
             document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer les modifications";
             document.getElementById('btnAnnulerEditDepense').style.display = "block";
+            switchTab('tab-finance', document.getElementById('navItemFinance'));
         }
 
-        function supprimerDepense(key, montant) {
-            if(confirm("Supprimer cette dépense ?")) { database.ref('dashboard/totalDepenses').transaction(cur => (cur || 0) - montant); database.ref('logs/' + key).remove(); }
+        function annulerModificationDepense() {
+            document.getElementById('editKeyDepense').value = "";
+            document.getElementById('dateDepense').valueAsDate = new Date();
+            document.getElementById('designationDepense').value = "";
+            document.getElementById('montantDepense').value = "";
+            document.getElementById('titleFormDepense').innerHTML = "<i class='fas fa-minus-circle'></i> Enregistrer une Dépense Générale";
+            document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer Dépense";
+            document.getElementById('btnAnnulerEditDepense').style.display = "none";
         }
 
-        function annulanterToutFormDepense() {
-            document.getElementById('editKeyDepense').value = ""; document.getElementById('montantDepense').value = ""; document.getElementById('designationDepense').value = "";
-            document.getElementById('titleFormDepense').innerHTML = `<i class="fas fa-minus-circle"></i> Enregistrer une Dépense`;
-            document.getElementById('btnEnregistrerDepenseAction').innerText = "Enregistrer Dépense"; document.getElementById('btnAnnulerEditDepense').style.display = "none";
-            document.getElementById('previewFacture').innerHTML = ""; factureUrl = null;
+        function supprimerDepense(key, mt) {
+            if(confirm("Voulez-vous vraiment supprimer définitivement cette dépense ?")) {
+                database.ref('dashboard').once('value', (snap) => {
+                    const d = snap.val() || {};
+                    database.ref('dashboard').update({ totalDepenses: (d.totalDepenses || 0) - mt });
+                });
+                database.ref('logs/' + key).remove().then(() => { triggerPopupNotification("Dépense supprimée !"); });
+            }
         }
 
-        function annulerModificationDepense() { annulanterToutFormDepense(); switchTab('tab-home', document.querySelector('.nav-item')); }
-        function envoyerMessage() { const msg = document.getElementById('msgInput').value; if(msg.trim()) { database.ref('chat').push({ expediteur: utilisateurConnecte, message: msg }); document.getElementById('msgInput').value = ""; } }
-
-        if(document.getElementById('factureDepense')) {
-            document.getElementById('factureDepense').addEventListener('change', function(e) {
-                const reader = new FileReader();
-                reader.onload = function(ev) { factureUrl = ev.target.result; document.getElementById('previewFacture').innerHTML = "<p>✅ Capture attachée !</p>"; }
-                reader.readAsDataURL(e.target.files[0]);
-            });
+        function envoyerMessage() {
+            const inp = document.getElementById('msgInput'); const m = inp.value.trim(); if(!m) return;
+            database.ref('chat').push({ expediteur: utilisateurConnecte, message: m }); inp.value = "";
         }
     </script>
 </body>
