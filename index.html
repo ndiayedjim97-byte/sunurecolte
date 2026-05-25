@@ -62,7 +62,6 @@
 
         .notif-popup { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 30px; z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; font-size: 0.9rem; font-weight: bold; text-align: center; }
 
-        /* NOUVEAUX STYLES REPARTITION FINANCIERE */
         .finance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 15px 0; }
         .finance-card-box { background: #ffffff; padding: 12px; border-radius: 10px; border-top: 4px solid #4ca1af; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; }
         .finance-card-box.commu { border-top-color: #ffa000; background: #fffbf2; }
@@ -74,6 +73,12 @@
         .config-input-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #f9f9f9; padding: 8px; border-radius: 6px; }
         .config-input-group label { font-weight: bold; font-size: 0.9rem; color: #444; }
         .config-input-group input { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
+
+        /* NOUVEAUX STYLES POUR LES SUIVIS DES ESPÈCES CULTIVÉES */
+        .culture-suivi-card { background: #ffffff; padding: 12px; border-radius: 10px; border-left: 5px solid #2e7d32; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;}
+        .culture-suivi-info h4 { margin: 0 0 5px 0; font-size: 1.05rem; color: #2e7d32; }
+        .culture-suivi-info p { margin: 2px 0; font-size: 0.85rem; color: #666; }
+        .culture-suivi-badge { background: #e8f5e9; color: #2e7d32; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; text-align: center; border: 1px solid #c8e6c9;}
     </style>
 </head>
 <body>
@@ -112,8 +117,8 @@
     <main id="appContent">
         <section id="tab-home" class="tab-content active">
             <div class="stats-grid">
-                <div class="stat-card">
-                    <i class="fas fa-box-open"></i> <p>Récolte Totale</p> <h3 id="totalKilos">0</h3> <span>KG</span>
+                <div class="stat-card" id="cardRecolteTotaleClick" onclick="clicRecolteTotale()" style="cursor: pointer; transition: transform 0.2s;">
+                    <i class="fas fa-box-open"></i> <p>Récolte Totale (Voir Jours)</p> <h3 id="totalKilos">0</h3> <span>KG</span>
                 </div>
                 <div class="stat-card income">
                     <i class="fas fa-wallet"></i> <p>Revenus Globaux</p> <h3 id="totalArgent">0</h3> <span>FCFA</span>
@@ -230,6 +235,11 @@
         </section>
 
         <section id="tab-technicien" class="tab-content ndiobo-only">
+            <div class="card" style="border-top: 4px solid #2e7d32; background: #fafafa;">
+                <h2><i class="fas fa-hourglass-half" style="color:#2e7d32;"></i> Âge des Espèces en cours de culture</h2>
+                <div id="listeSuiviCulturesJours">Chargement du temps de culture...</div>
+            </div>
+
             <div class="card finance-card" style="border-top: 4px solid #e65100;">
                 <h2><i class="fas fa-shopping-basket" style="color: #e65100;"></i> Enregistrer une Vente à Nioro (Ndiobo)</h2>
                 <input type="date" id="dateVenteNioro">
@@ -243,8 +253,10 @@
             </div>
 
             <div class="card" style="border-top: 4px solid #2e7d32; background: #f1f8e9;">
-                <h2><i class="fas fa-plus-circle" style="color:#2e7d32;"></i> Ajouter une espèce cultivée</h2>
+                <h2><i class="fas fa-plus-circle" style="color:#2e7d32;"></i> Enregistrer une espèce à cultiver</h2>
                 <input type="text" id="nomNouvelleEspece" placeholder="Nom de la culture (ex: Oignon, Tomate)">
+                <label style="font-size: 0.85rem; font-weight: bold; color: #555; display: block; margin-top: 8px;">Date de mise en terre / plantation :</label>
+                <input type="date" id="datePlantationEspece">
                 <button onclick="ajouterNouvelleEspece()" class="btn-primary" style="background:#2e7d32;">Enregistrer la Culture</button>
             </div>
 
@@ -336,7 +348,7 @@
     </main>
 
     <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('tab-home', this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+        <div class="nav-item active" id="navItemHome" onclick="switchTab('tab-home', this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
         <div class="nav-item nav-field" id="navItemField" onclick="switchTab('tab-field', this)"><i class="fas fa-tractor"></i><span>Terrain</span></div>
         <div class="nav-item nav-moustapha" id="navItemDakar" onclick="switchTab('tab-dakar', this)"><i class="fas fa-store"></i><span>Dakar</span></div>
         <div class="nav-item nav-ndiobo" id="navItemTechnicien" onclick="switchTab('tab-technicien', this)"><i class="fas fa-calendar-alt"></i><span>Planning / Nioro</span></div>
@@ -451,6 +463,23 @@
             el.classList.add('active');
         }
 
+        // ACCÈS DIRECT DEPUIS LA CARTE RÉCOLTE DEPUIS LE DASHBOARD
+        function clicRecolteTotale() {
+            // Force l'affichage global des outils de Ndiobo même pour Djim/Admin s'il veut checker l'âge des cultures
+            document.getElementById('tab-technicien').classList.add('active');
+            
+            const navTech = document.getElementById('navItemTechnicien');
+            if(navTech && window.getComputedStyle(navTech).display !== "none") {
+                switchTab('tab-technicien', navTech);
+            } else {
+                // Si l'utilisateur est Admin ou Dakar et n'a pas l'onglet dans son menu du bas, on ouvre la vue directement
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                document.getElementById('tab-technicien').classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            }
+            triggerPopupNotification("Ouverture du suivi détaillé des cultures de Ndiobo !");
+        }
+
         window.onload = function() {
             const now = new Date();
             document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -458,6 +487,7 @@
             if(document.getElementById('dateVenteDakar')) document.getElementById('dateVenteDakar').valueAsDate = now;
             if(document.getElementById('dateVenteNioro')) document.getElementById('dateVenteNioro').valueAsDate = now;
             if(document.getElementById('datePlanning')) document.getElementById('datePlanning').valueAsDate = now;
+            if(document.getElementById('datePlantationEspece')) document.getElementById('datePlantationEspece').valueAsDate = now;
 
             const nomSauvegarde = localStorage.getItem('userNomDarou');
             const codeSauvegarde = localStorage.getItem('userCodeDarou');
@@ -515,7 +545,6 @@
                     }
                 });
 
-                // 1. Afficher les ventes par espèces cultivées
                 const containerEspeces = document.getElementById('listeEspecesFinances');
                 if(containerEspeces) {
                     if(Object.keys(especesVentes).length === 0) {
@@ -532,7 +561,6 @@
                     }
                 }
 
-                // 2. Calcul des Caisses Communautaires et Individuelles
                 let epargneTotal = (totalRevenus * configurationsPartage.epargne) / 100;
                 let investissementTotal = (totalRevenus * configurationsPartage.investissement) / 100;
                 let resteAPartager = totalRevenus - (epargneTotal + investissementTotal);
@@ -542,7 +570,6 @@
                     partIndividuelle = (resteAPartager * configurationsPartage[utilisateurConnecte]) / 100;
                 }
 
-                // Affichage sur les bonnes cases de l'écran
                 if(document.getElementById('caisseEpargne')) document.getElementById('caisseEpargne').innerText = epargneTotal.toLocaleString() + " FCFA";
                 if(document.getElementById('caisseInvestissement')) document.getElementById('caisseInvestissement').innerText = investissementTotal.toLocaleString() + " FCFA";
                 if(document.getElementById('caissePersonnelle')) {
@@ -568,21 +595,68 @@
             document.getElementById('stk-carburant').innerText = s.carburant || 0;
         });
 
+        // RESTRUCTURATION : ECOUTEUR COMPACT SUR LES ESPÈCES CULTIVÉES AVEC CALCULS EN TEMPS RÉEL DES JOURS
         database.ref('especes_cultivees').on('value', (snap) => {
             const listes = [
                 document.getElementById('produit'),
                 document.getElementById('produitExpedie'),
                 document.getElementById('produitVenduDakar'),
-                document.getElementById('produitVenduNioro') // Ajouté pour Ndiobo
+                document.getElementById('produitVenduNioro')
             ];
             listes.forEach(l => { if(l) l.innerHTML = ""; });
 
+            const boxSuivi = document.getElementById('listeSuiviCulturesJours');
+            if(boxSuivi) boxSuivi.innerHTML = "";
+
             let data = snap.val();
-            if(!data) data = { "d1": "Piment Big Sun", "d2": "Gombo" };
+            if(!data) {
+                if(boxSuivi) boxSuivi.innerHTML = "<p style='color:#777; font-style:italic;'>Aucune espèce suivie.</p>";
+                return;
+            }
 
             Object.keys(data).forEach(k => {
-                const nom = data[k];
+                let nom = "";
+                let datePlantationStr = "";
+                
+                // Gère l'ancien format (simple chaîne) et le nouveau format structuré (objet)
+                if(typeof data[k] === 'object' && data[k] !== null) {
+                    nom = data[k].nom;
+                    datePlantationStr = data[k].datePlantation;
+                } else {
+                    nom = data[k];
+                }
+
+                // Alimentation des menus déroulants <select>
                 listes.forEach(l => { if(l) l.innerHTML += `<option value="${nom}">${nom}</option>`; });
+
+                // Traitement graphique de l'âge de la culture (Jours)
+                if(boxSuivi) {
+                    let texteJours = "Date non spécifiée";
+                    if(datePlantationStr) {
+                        const dateP = new Date(datePlantationStr);
+                        const aujourdhui = new Date();
+                        const diffMs = aujourdhui - dateP;
+                        const jours = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        
+                        if(jours < 0) {
+                            texteJours = "Plantation planifiée";
+                        } else {
+                            texteJours = `${jours} Jour(s)`;
+                        }
+                    }
+
+                    boxSuivi.innerHTML += `
+                        <div class="culture-suivi-card">
+                            <div class="culture-suivi-info">
+                                <h4>🌾 ${nom}</h4>
+                                <p><i class="fas fa-calendar-alt"></i> Planté le : ${datePlantationStr ? new Date(datePlantationStr).toLocaleDateString('fr-FR') : 'Inconnue'}</p>
+                            </div>
+                            <div class="culture-suivi-badge">
+                                ⏱️ ${texteJours}
+                            </div>
+                        </div>
+                    `;
+                }
             });
         });
 
@@ -655,7 +729,6 @@
             if(data) { Object.keys(data).forEach(k => { chat.innerHTML += `<div class="msg"><b>${data[k].expediteur}</b><br>${data[k].message}</div>`; }); chat.scrollTop = chat.scrollHeight; }
         });
 
-        // --- ENREGISTRER UNE VENTE (MOUSTAPHA) AVEC IMPACT FINANCIER DYNAMIQUE ---
         function calculerTotalVenteDakar() {
             const kg = parseFloat(document.getElementById('poidsVenduDakar').value) || 0;
             const px = parseFloat(document.getElementById('prixAuKgDakar').value) || 0;
@@ -701,7 +774,6 @@
             triggerPopupNotification("Vente enregistrée et caisses automatiquement recalculées !");
         }
 
-        // --- ENREGISTRER UNE VENTE POUR NDIOBO (NIORO) ---
         function calculerTotalVenteNioro() {
             const kg = parseFloat(document.getElementById('poidsVenduNioro').value) || 0;
             const px = parseFloat(document.getElementById('prixAuKgNioro').value) || 0;
@@ -720,7 +792,6 @@
             const parts = dateV.split('-');
             const dateFormatee = parts[2] + '/' + parts[1];
 
-            // 1. Mise à jour des revenus globaux
             database.ref('dashboard').once('value', (snap) => {
                 const d = snap.val() || { totalArgent: 0 };
                 database.ref('dashboard').update({
@@ -728,7 +799,6 @@
                 });
             });
 
-            // 2. Ajout dans l'historique général (Logs)
             database.ref('logs').push({
                 typeItem: 'vente',
                 dateLog: dateFormatee,
@@ -738,7 +808,6 @@
                 brutMontant: total
             });
 
-            // 3. Notification d'équipe (Chat)
             database.ref('chat').push({
                 expediteur: "🍊 VENTE NIORO",
                 message: `Ndiobo a validé une vente de **${prod}** à Nioro : **${kg} KG** pour **${total.toLocaleString()} FCFA**.`
@@ -750,7 +819,6 @@
             triggerPopupNotification("Vente à Nioro enregistrée avec succès !");
         }
 
-        // --- AUTRES LOGIQUES APPLICATIVES EXISTANTES ---
         function enregistrerRecolte() {
             const prod = document.getElementById('produit').value;
             const pds = parseFloat(document.getElementById('poids').value);
@@ -773,7 +841,7 @@
             triggerPopupNotification("Récolte ajoutée !");
         }
 
-        function creerExpeditionDakar() {
+        function crearExpeditionDakar() {
             const prod = document.getElementById('produitExpedie').value;
             const pds = parseFloat(document.getElementById('poidsExpedie').value);
             const chf = document.getElementById('chauffeurExpedie').value.trim();
@@ -790,7 +858,7 @@
             });
 
             database.ref('chat').push({
-                expediteur: "🚛 EXPÉDITION",
+                expediteur: "RM EXPÉDITION",
                 message: `📢 Ndiobo a expédié **${pds} KG** de **${prod}** vers Dakar avec le chauffeur : *${chf}*. En attente de réception.`
             });
 
@@ -822,12 +890,20 @@
             });
         }
 
+        // MISE A JOUR : SAUVEGARDE L'ESPÈCE STRUCTURÉE AVEC SA DATE DE PLANTATION
         function ajouterNouvelleEspece() {
             const nom = document.getElementById('nomNouvelleEspece').value.trim();
-            if(!nom) return;
-            database.ref('especes_cultivees').push(nom).then(() => {
+            const dateP = document.getElementById('datePlantationEspece').value;
+            if(!nom || !dateP) { alert("Le nom de l'espèce et la date de plantation sont obligatoires !"); return;}
+            
+            const cultureObjet = {
+                nom: nom,
+                datePlantation: dateP
+            };
+
+            database.ref('especes_cultivees').push(cultureObjet).then(() => {
                 document.getElementById('nomNouvelleEspece').value = "";
-                triggerPopupNotification("Nouvelle espèce enregistrée !");
+                triggerPopupNotification("Nouvelle espèce et date de plantation enregistrées !");
             });
         }
 
